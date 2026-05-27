@@ -251,6 +251,14 @@ struct TerminalAgentActivityReducer {
         }
     }
 
+    mutating func interruptRunningState() -> TerminalAgentActivityState? {
+        guard case .running = state else { return nil }
+
+        state = .idle
+        runningStartedAt = nil
+        return state
+    }
+
     mutating func expireRunningState(now: Date = Date()) -> TerminalAgentActivityState? {
         guard case .running = state,
               let runningStartedAt,

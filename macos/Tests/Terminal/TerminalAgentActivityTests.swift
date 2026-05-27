@@ -57,6 +57,17 @@ struct TerminalAgentActivityTests {
         #expect(reducer.state == .idle)
     }
 
+    @Test func reducerInterruptsRunningState() throws {
+        var reducer = TerminalAgentActivityReducer()
+
+        #expect(
+            reducer.apply(event("prompt-submit", state: "running", sessionID: "s1")) ==
+                .running(agent: "claude"))
+        #expect(reducer.interruptRunningState() == .idle)
+        #expect(reducer.state == .idle)
+        #expect(reducer.interruptRunningState() == nil)
+    }
+
     @Test func runningStateExpiresAfterTTL() throws {
         var reducer = TerminalAgentActivityReducer()
         let start = Date()

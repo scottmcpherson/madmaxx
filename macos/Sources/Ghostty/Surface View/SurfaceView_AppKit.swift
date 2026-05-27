@@ -821,6 +821,11 @@ extension Ghostty {
             }
         }
 
+        private func interruptRunningAgentActivity() {
+            guard let nextState = agentActivityReducer.interruptRunningState() else { return }
+            setAgentActivityState(nextState)
+        }
+
         private func scheduleAgentActivityTTLTimer() {
             agentActivityTTLTimer?.invalidate()
             guard case .running = agentActivityState else {
@@ -1331,6 +1336,10 @@ extension Ghostty {
             // On any keyDown event we unset our bell state
             bell = false
 
+            if isPlainEscape(event) {
+                interruptRunningAgentActivity()
+            }
+
             // We need to translate the mods (maybe) to handle configs such as option-as-alt
             let translationModsGhostty = Ghostty.eventModifierFlags(
                 mods: ghostty_surface_key_translation_mods(
@@ -1711,18 +1720,26 @@ extension Ghostty {
                 noteUserInputActivity()
             }
 
+            let handled: Bool
             // For text, we only encode UTF8 if we don't have a single control
             // character. Control characters are encoded by Ghostty itself.
             // Without this, `ctrl+enter` does the wrong thing.
             if let text, text.count > 0,
                let codepoint = text.utf8.first, codepoint >= 0x20 {
-                return text.withCString { ptr in
+                handled = text.withCString { ptr in
                     key_ev.text = ptr
                     return ghostty_surface_key(surface, key_ev)
                 }
             } else {
-                return ghostty_surface_key(surface, key_ev)
+                handled = ghostty_surface_key(surface, key_ev)
             }
+
+            return handled
+        }
+
+        private func isPlainEscape(_ event: NSEvent) -> Bool {
+            guard event.keyCode == 0x35 else { return false }
+            return event.modifierFlags.isDisjoint(with: [.shift, .control, .option, .command])
         }
 
         private func shouldReplayCommittedPreeditKey(_ event: NSEvent) -> Bool {
