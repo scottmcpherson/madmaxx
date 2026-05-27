@@ -50,6 +50,9 @@ class DockTilePlugin: NSObject, NSDockTilePlugIn {
     /// Reset the application icon and dock tile icon to the default.
     private func resetIcon(dockTile: NSDockTile) {
         let appIcon: NSImage?
+        #if DEBUG
+        appIcon = pluginBundle.image(forResource: "BlueprintImage")!
+        #else
         if #available(macOS 26.0, *) {
             // Reset to the bundled app icon.
             appIcon = nil
@@ -57,6 +60,7 @@ class DockTilePlugin: NSObject, NSDockTilePlugIn {
             // Use the bundled icon to keep the corner radius consistent with pre-Tahoe apps.
             appIcon = pluginBundle.image(forResource: "AppIconImage")!
         }
+        #endif
         dockTile.setIcon(appIcon)
     }
 }

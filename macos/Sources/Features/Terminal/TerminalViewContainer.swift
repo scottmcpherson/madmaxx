@@ -1,16 +1,23 @@
 import AppKit
+import QuartzCore
 import SwiftUI
 
 /// Use this container to achieve a glass effect at the window level.
 /// Modifying `NSThemeFrame` can sometimes be unpredictable.
 class TerminalViewContainer: NSView {
+    private static let sidebarCollapseOvershoot: CGFloat = 48
+    private static let sidebarAnimationDuration: TimeInterval = 0.22
+
     private let terminalView: NSView
     private var sidebarView: NSView?
+    private var sidebarContentView: NSView?
     private var sidebarWidth: CGFloat = 0
     private var sidebarWidthConstraint: NSLayoutConstraint?
     private var terminalLeadingConstraint: NSLayoutConstraint?
     private var terminalLeadingSidebarConstraint: NSLayoutConstraint?
     private var sidebarResizeHandle: SidebarResizeHandle?
+    private var resizingSidebarWidth: CGFloat?
+    private var animatingSidebarWidth = false
 
     /// Combined glass effect and inactive tint overlay view
     private(set) var glassEffectView: NSView?
@@ -84,70 +91,144 @@ class TerminalViewContainer: NSView {
         ])
     }
 
-    func installSidebar(_ sidebar: NSView, width: CGFloat) {
-        guard sidebarView !== sidebar else {
-            setSidebarWidth(width, propagateToTabGroup: false)
-            syncSidebarTitlebarWidth()
+    func installSidebar(_ sidebar: NSView, width: CGFloat, animated: Bool = false) {
+        guard sidebarContentView !== sidebar else {
+            setSidebarWidth(width, propagateToTabGroup: false, animated: animated)
+            if !animated {
+                syncSidebarTitlebarWidth()
+            }
             return
         }
 
         sidebarView?.removeFromSuperview()
         sidebarResizeHandle?.removeFromSuperview()
-        sidebarView = sidebar
-        setSidebarWidth(width, propagateToTabGroup: false)
+        let targetWidth = clampedSidebarWidth(width)
+        sidebarWidth = animated ? 0 : targetWidth
+        TerminalSidebarController.setPreferredWidth(targetWidth)
 
-        addSubview(sidebar)
+        let sidebarContainer = NSView()
+        sidebarContainer.wantsLayer = true
+        sidebarContainer.layer?.masksToBounds = true
+        sidebarContainer.translatesAutoresizingMaskIntoConstraints = false
+        sidebarView = sidebarContainer
+        sidebarContentView = sidebar
+
+        addSubview(sidebarContainer)
+        sidebarContainer.addSubview(sidebar)
         sidebar.translatesAutoresizingMaskIntoConstraints = false
         terminalLeadingConstraint?.isActive = false
-        let terminalToSidebar = terminalView.leadingAnchor.constraint(equalTo: sidebar.trailingAnchor)
-        let widthConstraint = sidebar.widthAnchor.constraint(equalToConstant: sidebarWidth)
+        let terminalToSidebar = terminalView.leadingAnchor.constraint(equalTo: sidebarContainer.trailingAnchor)
+        let widthConstraint = sidebarContainer.widthAnchor.constraint(equalToConstant: sidebarWidth)
         terminalLeadingSidebarConstraint = terminalToSidebar
         sidebarWidthConstraint = widthConstraint
 
         NSLayoutConstraint.activate([
-            sidebar.leadingAnchor.constraint(equalTo: leadingAnchor),
-            sidebar.topAnchor.constraint(equalTo: topAnchor),
-            sidebar.bottomAnchor.constraint(equalTo: bottomAnchor),
+            sidebarContainer.leadingAnchor.constraint(equalTo: leadingAnchor),
+            sidebarContainer.topAnchor.constraint(equalTo: topAnchor),
+            sidebarContainer.bottomAnchor.constraint(equalTo: bottomAnchor),
             widthConstraint,
-            sidebar.widthAnchor.constraint(greaterThanOrEqualToConstant: TerminalSidebarController.minWidth),
-            sidebar.widthAnchor.constraint(lessThanOrEqualToConstant: TerminalSidebarController.maxWidth),
             terminalToSidebar,
+
+            sidebar.leadingAnchor.constraint(equalTo: sidebarContainer.leadingAnchor),
+            sidebar.topAnchor.constraint(equalTo: sidebarContainer.topAnchor),
+            sidebar.bottomAnchor.constraint(equalTo: sidebarContainer.bottomAnchor),
+            sidebar.trailingAnchor.constraint(equalTo: sidebarContainer.trailingAnchor),
         ])
 
         let resizeHandle = SidebarResizeHandle(container: self)
         sidebarResizeHandle = resizeHandle
-        addSubview(resizeHandle, positioned: .above, relativeTo: sidebar)
+        addSubview(resizeHandle, positioned: .above, relativeTo: sidebarContainer)
         NSLayoutConstraint.activate([
-            resizeHandle.centerXAnchor.constraint(equalTo: sidebar.trailingAnchor),
+            resizeHandle.centerXAnchor.constraint(equalTo: sidebarContainer.trailingAnchor),
             resizeHandle.topAnchor.constraint(equalTo: topAnchor),
             resizeHandle.bottomAnchor.constraint(equalTo: bottomAnchor),
             resizeHandle.widthAnchor.constraint(equalToConstant: 8),
         ])
 
         invalidateIntrinsicContentSize()
-        syncSidebarTitlebarWidth()
+        if animated {
+            animateSidebarWidth(to: targetWidth, propagateToTabGroup: false)
+        } else {
+            sidebarWidth = targetWidth
+            syncSidebarTitlebarWidth()
+        }
     }
 
-    func removeSidebar() {
+    func removeSidebar(animated: Bool = false, titlebarHandoff: (() -> Void)? = nil) {
         guard let sidebarView else { return }
 
+        if animated, let sidebarWidthConstraint {
+            let currentWidth = clampedSidebarWidth(currentSidebarWidth)
+            let handoffDelay = Self.sidebarAnimationDuration * min(
+                max((currentWidth - TerminalSidebarController.minWidth) / currentWidth, 0),
+                1)
+            sidebarWidth = currentWidth
+            sidebarWidthConstraint.constant = currentWidth
+            layoutSubtreeIfNeeded()
+
+            sidebarResizeHandle?.isHidden = true
+            (window as? TerminalWindow)?.setSidebarTitlebarWidth(
+                currentWidth,
+                allowsCollapsedWidth: true)
+            animatingSidebarWidth = true
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + handoffDelay) { [weak self] in
+                guard self?.animatingSidebarWidth == true else { return }
+                titlebarHandoff?()
+            }
+
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = Self.sidebarAnimationDuration
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                sidebarWidthConstraint.animator().constant = 0
+                self.animator().layoutSubtreeIfNeeded()
+                (self.window as? TerminalWindow)?.setSidebarTitlebarWidth(
+                    0,
+                    animated: true,
+                    allowsCollapsedWidth: true)
+            } completionHandler: {
+                self.animatingSidebarWidth = false
+                titlebarHandoff?()
+                self.finishRemovingSidebar(sidebarView)
+            }
+            return
+        }
+
+        finishRemovingSidebar(sidebarView)
+    }
+
+    private func finishRemovingSidebar(_ sidebarView: NSView) {
         sidebarView.removeFromSuperview()
         sidebarResizeHandle?.removeFromSuperview()
         self.sidebarView = nil
+        sidebarContentView = nil
         sidebarResizeHandle = nil
         sidebarWidth = 0
         sidebarWidthConstraint = nil
+        resizingSidebarWidth = nil
+        animatingSidebarWidth = false
         terminalLeadingSidebarConstraint?.isActive = false
         terminalLeadingSidebarConstraint = nil
         terminalLeadingConstraint?.isActive = true
 
         invalidateIntrinsicContentSize()
-        (window as? TerminalWindow)?.removeSidebarTitlebarBackground()
+        (window as? TerminalWindow)?.removeSidebarTitlebarSidebarChrome()
     }
 
     fileprivate func resizeSidebar(by deltaX: CGFloat) {
-        setSidebarWidth(sidebarWidth + deltaX, propagateToTabGroup: true)
-        sidebarWidthConstraint?.constant = sidebarWidth
+        let proposedWidth = (resizingSidebarWidth ?? sidebarWidth) + deltaX
+        resizingSidebarWidth = proposedWidth
+
+        if proposedWidth <= TerminalSidebarController.minWidth - Self.sidebarCollapseOvershoot {
+            resizingSidebarWidth = nil
+            (window as? TerminalWindow)?.setSidebarCollapsed(
+                true,
+                propagateToTabGroup: true,
+                animated: true)
+            return
+        }
+
+        setSidebarWidth(proposedWidth, propagateToTabGroup: true)
         layoutSubtreeIfNeeded()
     }
 
@@ -155,22 +236,78 @@ class TerminalViewContainer: NSView {
         resizeSidebar(by: deltaX)
     }
 
+    func beginSidebarResize() {
+        resizingSidebarWidth = sidebarWidth
+    }
+
+    func endSidebarResize() {
+        resizingSidebarWidth = nil
+    }
+
     func syncSidebarTitlebarWidth() {
         guard sidebarView != nil else { return }
 
-        let width = clampedSidebarWidth(currentSidebarWidth)
-        (window as? TerminalWindow)?.setSidebarTitlebarWidth(width)
+        if animatingSidebarWidth {
+            (window as? TerminalWindow)?.setSidebarTitlebarWidth(
+                currentSidebarWidth,
+                allowsCollapsedWidth: true)
+        } else {
+            let width = clampedSidebarWidth(currentSidebarWidth)
+            (window as? TerminalWindow)?.setSidebarTitlebarWidth(width)
+        }
     }
 
-    private func setSidebarWidth(_ width: CGFloat, propagateToTabGroup: Bool) {
+    private func setSidebarWidth(
+        _ width: CGFloat,
+        propagateToTabGroup: Bool,
+        animated: Bool = false
+    ) {
         sidebarWidth = clampedSidebarWidth(width)
         TerminalSidebarController.setPreferredWidth(sidebarWidth)
-        sidebarWidthConstraint?.constant = sidebarWidth
-        invalidateIntrinsicContentSize()
-        (window as? TerminalWindow)?.setSidebarTitlebarWidth(sidebarWidth)
 
-        if propagateToTabGroup {
-            syncSidebarWidthAcrossTabGroup()
+        if animated {
+            animateSidebarWidth(to: sidebarWidth, propagateToTabGroup: propagateToTabGroup)
+        } else {
+            sidebarWidthConstraint?.constant = sidebarWidth
+            invalidateIntrinsicContentSize()
+            (window as? TerminalWindow)?.setSidebarTitlebarWidth(sidebarWidth)
+
+            if propagateToTabGroup {
+                syncSidebarWidthAcrossTabGroup()
+            }
+        }
+    }
+
+    private func animateSidebarWidth(to width: CGFloat, propagateToTabGroup: Bool) {
+        guard let sidebarWidthConstraint else {
+            setSidebarWidth(width, propagateToTabGroup: propagateToTabGroup)
+            return
+        }
+
+        let width = clampedSidebarWidth(width)
+        sidebarWidth = width
+        TerminalSidebarController.setPreferredWidth(width)
+        layoutSubtreeIfNeeded()
+        animatingSidebarWidth = true
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = Self.sidebarAnimationDuration
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            sidebarWidthConstraint.animator().constant = width
+            self.animator().layoutSubtreeIfNeeded()
+            (self.window as? TerminalWindow)?.setSidebarTitlebarWidth(
+                width,
+                animated: true,
+                allowsCollapsedWidth: true,
+                showsNewSessionButton: false)
+        } completionHandler: {
+            self.animatingSidebarWidth = false
+            self.invalidateIntrinsicContentSize()
+            (self.window as? TerminalWindow)?.setSidebarTitlebarWidth(width)
+
+            if propagateToTabGroup {
+                self.syncSidebarWidthAcrossTabGroup()
+            }
         }
     }
 
@@ -256,6 +393,7 @@ private final class SidebarResizeHandle: NSView {
 
     override func mouseDown(with event: NSEvent) {
         lastMouseX = event.locationInWindow.x
+        container?.beginSidebarResize()
     }
 
     override func mouseDragged(with event: NSEvent) {
@@ -267,6 +405,7 @@ private final class SidebarResizeHandle: NSView {
 
     override func mouseUp(with event: NSEvent) {
         lastMouseX = nil
+        container?.endSidebarResize()
     }
 }
 

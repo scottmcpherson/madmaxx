@@ -55,8 +55,11 @@ class TerminalWindow: NSWindow {
     private var sidebarTitlebarWidthConstraint: NSLayoutConstraint?
     private var sidebarTitlebarResizeHandle: SidebarTitlebarResizeHandle?
     private var sidebarTitlebarResizeHandleCenterXConstraint: NSLayoutConstraint?
+    private var sidebarTitlebarLeadingControlsView: SidebarTitlebarLeadingControlsView?
+    private var sidebarTitlebarLeadingControlsLeadingConstraint: NSLayoutConstraint?
     private var sidebarTitlebarControlsView: SidebarTitlebarControlsView?
     private var sidebarCollapsed = false
+    private var sidebarClosingTitlebarHandoffPending = false
 
     var isSidebarCollapsed: Bool {
         sidebarCollapsed
@@ -261,29 +264,44 @@ class TerminalWindow: NSWindow {
         tabTitleEditor.beginEditing(for: targetWindow)
     }
 
-    func installSidebarIfNeeded() {
+    func installSidebarIfNeeded(animated: Bool = false) {
         guard derivedConfig.macosTitlebarStyle == .sidebar else {
             sidebarCollapsed = false
             sidebarController = nil
             terminalController?.terminalViewContainer?.removeSidebar()
-            removeSidebarTitlebarBackground()
+            removeSidebarTitlebarChrome()
             return
         }
 
         guard !sidebarCollapsed else {
             configureSidebarChrome()
-            terminalController?.terminalViewContainer?.removeSidebar()
+            terminalController?.terminalViewContainer?.removeSidebar(
+                animated: animated,
+                titlebarHandoff: { [weak self] in
+                    self?.completeSidebarClosingTitlebarHandoff()
+                })
             hideNativeTabBarForSidebar()
             return
         }
 
         guard let container = terminalController?.terminalViewContainer else { return }
 
-        configureSidebarChrome()
+        configureSidebarChrome(syncSidebarWidth: !animated)
         let controller = sidebarController ?? TerminalSidebarController(hostWindow: self)
         sidebarController = controller
-        container.installSidebar(controller.view, width: TerminalSidebarController.preferredWidth)
-        container.syncSidebarTitlebarWidth()
+        if animated {
+            setSidebarTitlebarWidth(
+                0,
+                allowsCollapsedWidth: true,
+                showsNewSessionButton: false)
+        }
+        container.installSidebar(
+            controller.view,
+            width: TerminalSidebarController.preferredWidth,
+            animated: animated)
+        if !animated {
+            container.syncSidebarTitlebarWidth()
+        }
         controller.sync()
         syncSidebarAppearance()
         hideNativeTabBarForSidebar()
@@ -293,27 +311,37 @@ class TerminalWindow: NSWindow {
     func toggleSidebar(_ _: Any?) -> Bool {
         guard derivedConfig.macosTitlebarStyle == .sidebar else { return false }
 
-        setSidebarCollapsed(!sidebarCollapsed, propagateToTabGroup: true)
+        setSidebarCollapsed(!sidebarCollapsed, propagateToTabGroup: true, animated: true)
         return true
     }
 
-    func setSidebarCollapsed(_ collapsed: Bool, propagateToTabGroup: Bool) {
+    func setSidebarCollapsed(
+        _ collapsed: Bool,
+        propagateToTabGroup: Bool,
+        animated: Bool = false
+    ) {
         guard derivedConfig.macosTitlebarStyle == .sidebar else { return }
 
         sidebarCollapsed = collapsed
+        sidebarClosingTitlebarHandoffPending = collapsed && animated
+        syncSidebarTitlebarLeadingControls()
         if collapsed {
-            terminalController?.terminalViewContainer?.removeSidebar()
+            terminalController?.terminalViewContainer?.removeSidebar(
+                animated: animated,
+                titlebarHandoff: { [weak self] in
+                    self?.completeSidebarClosingTitlebarHandoff()
+                })
             hideNativeTabBarForSidebar()
         } else {
-            installSidebarIfNeeded()
+            installSidebarIfNeeded(animated: animated)
         }
 
         if propagateToTabGroup {
-            syncSidebarCollapsedAcrossTabGroup()
+            syncSidebarCollapsedAcrossTabGroup(animated: animated)
         }
     }
 
-    private func syncSidebarCollapsedAcrossTabGroup() {
+    private func syncSidebarCollapsedAcrossTabGroup(animated: Bool) {
         guard let windows = tabGroup?.windows else { return }
 
         for window in windows where window !== self {
@@ -321,8 +349,18 @@ class TerminalWindow: NSWindow {
                 continue
             }
 
-            terminalWindow.setSidebarCollapsed(sidebarCollapsed, propagateToTabGroup: false)
+            terminalWindow.setSidebarCollapsed(
+                sidebarCollapsed,
+                propagateToTabGroup: false,
+                animated: animated)
         }
+    }
+
+    func completeSidebarClosingTitlebarHandoff() {
+        guard sidebarCollapsed, sidebarClosingTitlebarHandoffPending else { return }
+
+        sidebarClosingTitlebarHandoffPending = false
+        syncSidebarTitlebarLeadingControls()
     }
 
     private func handleSidebarToggleShortcut(_ event: NSEvent) -> Bool {
@@ -356,47 +394,57 @@ class TerminalWindow: NSWindow {
         let theme = sidebarTheme
         sidebarController?.updateTheme(theme)
         sidebarTitlebarBackgroundView?.theme = theme
+        sidebarTitlebarLeadingControlsView?.theme = theme
         sidebarTitlebarControlsView?.theme = theme
     }
 
-    private func configureSidebarChrome() {
+    private func configureSidebarChrome(syncSidebarWidth: Bool = true) {
         styleMask.insert(.fullSizeContentView)
         titleVisibility = .hidden
         titlebarAppearsTransparent = true
         toolbar = nil
 
-        guard !sidebarCollapsed else {
-            removeSidebarTitlebarBackground()
+        guard let titlebarView = titlebarContainer?.firstDescendant(withClassName: "NSTitlebarView") else {
             return
         }
+        installSidebarTitlebarLeadingControls(in: titlebarView)
+        installSidebarTitlebarControls(in: titlebarView)
+
+        guard !sidebarCollapsed else {
+            if !sidebarClosingTitlebarHandoffPending {
+                removeSidebarTitlebarSidebarChrome()
+            }
+            return
+        }
+
+        guard syncSidebarWidth else { return }
 
         let currentWidth = terminalController?.terminalViewContainer?.currentSidebarWidth ?? 0
         let width = currentWidth > 0 ? currentWidth : TerminalSidebarController.preferredWidth
         setSidebarTitlebarWidth(width)
-
-        DispatchQueue.main.async { [weak self] in
-            if let container = self?.terminalController?.terminalViewContainer {
-                container.syncSidebarTitlebarWidth()
-            } else {
-                self?.setSidebarTitlebarWidth(TerminalSidebarController.preferredWidth)
-            }
-        }
     }
 
-    func setSidebarTitlebarWidth(_ width: CGFloat) {
+    func setSidebarTitlebarWidth(
+        _ width: CGFloat,
+        animated: Bool = false,
+        allowsCollapsedWidth: Bool = false,
+        showsNewSessionButton: Bool = true
+    ) {
         guard derivedConfig.macosTitlebarStyle == .sidebar else { return }
 
-        let width = min(
-            max(width, TerminalSidebarController.minWidth),
-            TerminalSidebarController.maxWidth)
+        let minWidth: CGFloat = allowsCollapsedWidth ? 0 : TerminalSidebarController.minWidth
+        let width = min(max(width, minWidth), TerminalSidebarController.maxWidth)
 
         guard let titlebarView = titlebarContainer?.firstDescendant(withClassName: "NSTitlebarView") else {
             return
         }
+        installSidebarTitlebarLeadingControls(in: titlebarView)
 
         let backgroundView = sidebarTitlebarBackgroundView ?? SidebarTitlebarBackgroundView()
         backgroundView.hostWindow = self
         backgroundView.theme = sidebarTheme
+        backgroundView.showsNewSessionButton = showsNewSessionButton &&
+            (!sidebarCollapsed || sidebarClosingTitlebarHandoffPending)
         if backgroundView.superview !== titlebarView {
             sidebarTitlebarWidthConstraint?.isActive = false
             backgroundView.removeFromSuperview()
@@ -419,13 +467,22 @@ class TerminalWindow: NSWindow {
             sidebarTitlebarBackgroundView = backgroundView
         }
 
-        sidebarTitlebarWidthConstraint?.constant = width
+        if animated {
+            sidebarTitlebarWidthConstraint?.animator().constant = width
+            if width > 0 {
+                backgroundView.animator().alphaValue = 1
+            } else {
+                backgroundView.alphaValue = 1
+            }
+        } else {
+            sidebarTitlebarWidthConstraint?.constant = width
+            backgroundView.alphaValue = width > 0 ? 1 : 0
+        }
         backgroundView.needsDisplay = true
-        installSidebarTitlebarResizeHandle(in: titlebarView, width: width)
-        installSidebarTitlebarControls(in: titlebarView)
+        installSidebarTitlebarResizeHandle(in: titlebarView, width: width, animated: animated)
     }
 
-    func removeSidebarTitlebarBackground() {
+    func removeSidebarTitlebarSidebarChrome() {
         sidebarTitlebarWidthConstraint?.isActive = false
         sidebarTitlebarWidthConstraint = nil
         sidebarTitlebarBackgroundView?.removeFromSuperview()
@@ -434,11 +491,70 @@ class TerminalWindow: NSWindow {
         sidebarTitlebarResizeHandleCenterXConstraint = nil
         sidebarTitlebarResizeHandle?.removeFromSuperview()
         sidebarTitlebarResizeHandle = nil
+    }
+
+    private func removeSidebarTitlebarChrome() {
+        removeSidebarTitlebarSidebarChrome()
+        sidebarTitlebarLeadingControlsLeadingConstraint?.isActive = false
+        sidebarTitlebarLeadingControlsLeadingConstraint = nil
+        sidebarTitlebarLeadingControlsView?.removeFromSuperview()
+        sidebarTitlebarLeadingControlsView = nil
         sidebarTitlebarControlsView?.removeFromSuperview()
         sidebarTitlebarControlsView = nil
     }
 
-    private func installSidebarTitlebarResizeHandle(in titlebarView: NSView, width: CGFloat) {
+    private func syncSidebarTitlebarLeadingControls() {
+        guard derivedConfig.macosTitlebarStyle == .sidebar,
+              let titlebarView = titlebarContainer?.firstDescendant(withClassName: "NSTitlebarView")
+        else { return }
+
+        installSidebarTitlebarLeadingControls(in: titlebarView)
+        sidebarTitlebarBackgroundView?.showsNewSessionButton =
+            !sidebarCollapsed || sidebarClosingTitlebarHandoffPending
+    }
+
+    private func installSidebarTitlebarLeadingControls(in titlebarView: NSView) {
+        let controlsView = sidebarTitlebarLeadingControlsView ?? SidebarTitlebarLeadingControlsView(hostWindow: self)
+        controlsView.hostWindow = self
+        controlsView.theme = sidebarTheme
+        controlsView.isSidebarCollapsed = sidebarCollapsed && !sidebarClosingTitlebarHandoffPending
+        controlsView.updateTooltips()
+
+        if controlsView.superview !== titlebarView {
+            sidebarTitlebarLeadingControlsLeadingConstraint?.isActive = false
+            controlsView.removeFromSuperview()
+            controlsView.translatesAutoresizingMaskIntoConstraints = false
+            titlebarView.addSubview(controlsView)
+
+            let leadingConstraint = controlsView.leadingAnchor.constraint(
+                equalTo: titlebarView.leadingAnchor,
+                constant: sidebarTitlebarLeadingControlsOffset(in: titlebarView))
+            NSLayoutConstraint.activate([
+                leadingConstraint,
+                controlsView.centerYAnchor.constraint(equalTo: titlebarView.centerYAnchor),
+            ])
+            sidebarTitlebarLeadingControlsLeadingConstraint = leadingConstraint
+            sidebarTitlebarLeadingControlsView = controlsView
+        }
+
+        sidebarTitlebarLeadingControlsLeadingConstraint?.constant =
+            sidebarTitlebarLeadingControlsOffset(in: titlebarView)
+    }
+
+    private func sidebarTitlebarLeadingControlsOffset(in titlebarView: NSView) -> CGFloat {
+        let visibleButtonMaxX = [
+            standardWindowButton(.closeButton),
+            standardWindowButton(.miniaturizeButton),
+            standardWindowButton(.zoomButton),
+        ].compactMap { button -> CGFloat? in
+            guard let button, !button.isHiddenOrHasHiddenAncestor else { return nil }
+            return button.convert(button.bounds, to: titlebarView).maxX
+        }.max()
+
+        return (visibleButtonMaxX ?? 8) + 12
+    }
+
+    private func installSidebarTitlebarResizeHandle(in titlebarView: NSView, width: CGFloat, animated: Bool = false) {
         let resizeHandle = sidebarTitlebarResizeHandle ?? SidebarTitlebarResizeHandle(hostWindow: self)
         resizeHandle.hostWindow = self
 
@@ -461,7 +577,11 @@ class TerminalWindow: NSWindow {
             sidebarTitlebarResizeHandle = resizeHandle
         }
 
-        sidebarTitlebarResizeHandleCenterXConstraint?.constant = width
+        if animated {
+            sidebarTitlebarResizeHandleCenterXConstraint?.animator().constant = width
+        } else {
+            sidebarTitlebarResizeHandleCenterXConstraint?.constant = width
+        }
     }
 
     private func installSidebarTitlebarControls(in titlebarView: NSView) {
@@ -937,10 +1057,13 @@ private final class SidebarTitlebarBackgroundView: NSView {
     var theme: TerminalSidebarTheme = .fallback {
         didSet { applyTheme() }
     }
+    var showsNewSessionButton = true {
+        didSet { newSessionButton.isHidden = !showsNewSessionButton }
+    }
 
     private lazy var newSessionButton: NSButton = {
         let button = NSButton()
-        button.image = NSImage(systemSymbolName: "plus", accessibilityDescription: "New Tab")
+        button.image = NSImage(systemSymbolName: "plus", accessibilityDescription: "New Terminal")
         button.bezelStyle = .texturedRounded
         button.isBordered = false
         button.imagePosition = .imageOnly
@@ -948,7 +1071,7 @@ private final class SidebarTitlebarBackgroundView: NSView {
         button.target = self
         button.action = #selector(newSession)
         button.toolTip = sidebarTitlebarTooltip(
-            title: "New Tab",
+            title: "New Terminal",
             action: "new_tab")
         button.identifier = NSUserInterfaceItemIdentifier("TerminalSidebarNewSessionButton")
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -957,6 +1080,8 @@ private final class SidebarTitlebarBackgroundView: NSView {
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.masksToBounds = true
         addSubview(newSessionButton)
         NSLayoutConstraint.activate([
             newSessionButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -7),
@@ -965,6 +1090,7 @@ private final class SidebarTitlebarBackgroundView: NSView {
             newSessionButton.heightAnchor.constraint(equalToConstant: 24),
         ])
         applyTheme()
+        newSessionButton.isHidden = !showsNewSessionButton
     }
 
     @available(*, unavailable)
@@ -1000,13 +1126,134 @@ private final class SidebarTitlebarBackgroundView: NSView {
 
     func updateTooltips() {
         newSessionButton.toolTip = sidebarTitlebarTooltip(
-            title: "New Tab",
+            title: "New Terminal",
             action: "new_tab")
     }
 
     private func applyTheme() {
         newSessionButton.contentTintColor = theme.buttonTint
         needsDisplay = true
+    }
+
+    @objc private func newSession() {
+        let newController = TerminalSidebarController.newSession(from: hostWindow)
+        DispatchQueue.main.async { [weak newController] in
+            guard let controller = newController,
+                  let focusedSurface = controller.focusedSurface
+            else { return }
+
+            controller.focusSurface(focusedSurface)
+        }
+    }
+}
+
+private final class SidebarTitlebarLeadingControlsView: NSView {
+    weak var hostWindow: TerminalWindow?
+    var theme: TerminalSidebarTheme = .fallback {
+        didSet { applyTheme() }
+    }
+    var isSidebarCollapsed = false {
+        didSet { updateCollapsedState() }
+    }
+
+    private lazy var toggleButton = makeButton(
+        symbolName: "sidebar.left",
+        title: "Toggle Sidebar",
+        identifier: "TerminalSidebarToggleButton",
+        action: #selector(toggleSidebar))
+
+    private lazy var newSessionButton = makeButton(
+        symbolName: "plus",
+        title: "New Terminal",
+        identifier: "TerminalSidebarCollapsedNewSessionButton",
+        action: #selector(newSession))
+
+    init(hostWindow: TerminalWindow) {
+        self.hostWindow = hostWindow
+        super.init(frame: .zero)
+
+        let stackView = NSStackView(views: [
+            toggleButton,
+            newSessionButton,
+        ])
+        stackView.orientation = .horizontal
+        stackView.spacing = 2
+        stackView.alignment = .centerY
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(stackView)
+
+        NSLayoutConstraint.activate([
+            stackView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            stackView.topAnchor.constraint(equalTo: topAnchor),
+            stackView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            stackView.trailingAnchor.constraint(equalTo: trailingAnchor),
+        ])
+
+        applyTheme()
+        updateTooltips()
+        updateCollapsedState()
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override var isFlipped: Bool { true }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        let hitView = super.hitTest(point)
+        return hitView is NSButton ? hitView : nil
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyTheme()
+        updateTooltips()
+    }
+
+    func updateTooltips() {
+        toggleButton.toolTip = "Toggle Sidebar"
+        newSessionButton.toolTip = sidebarTitlebarTooltip(
+            title: "New Terminal",
+            action: "new_tab")
+    }
+
+    private func makeButton(
+        symbolName: String,
+        title: String,
+        identifier: String,
+        action: Selector
+    ) -> NSButton {
+        let button = NSButton()
+        button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: title)
+        button.bezelStyle = .texturedRounded
+        button.isBordered = false
+        button.imagePosition = .imageOnly
+        button.contentTintColor = theme.buttonTint
+        button.target = self
+        button.action = action
+        button.toolTip = title
+        button.identifier = NSUserInterfaceItemIdentifier(identifier)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            button.widthAnchor.constraint(equalToConstant: 24),
+            button.heightAnchor.constraint(equalToConstant: 24),
+        ])
+        return button
+    }
+
+    private func applyTheme() {
+        toggleButton.contentTintColor = theme.buttonTint
+        newSessionButton.contentTintColor = theme.buttonTint
+    }
+
+    private func updateCollapsedState() {
+        newSessionButton.isHidden = !isSidebarCollapsed
+    }
+
+    @objc private func toggleSidebar() {
+        hostWindow?.toggleSidebar(self)
     }
 
     @objc private func newSession() {
@@ -1169,6 +1416,7 @@ private final class SidebarTitlebarResizeHandle: NSView {
 
     override func mouseDown(with event: NSEvent) {
         lastMouseX = event.locationInWindow.x
+        hostWindow?.terminalController?.terminalViewContainer?.beginSidebarResize()
     }
 
     override func mouseDragged(with event: NSEvent) {
@@ -1181,6 +1429,7 @@ private final class SidebarTitlebarResizeHandle: NSView {
 
     override func mouseUp(with event: NSEvent) {
         lastMouseX = nil
+        hostWindow?.terminalController?.terminalViewContainer?.endSidebarResize()
     }
 }
 

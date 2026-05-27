@@ -71,7 +71,7 @@ struct TerminalSidebarTheme: Equatable {
 final class TerminalSidebarController {
     static let width: CGFloat = 176
     static let minWidth: CGFloat = 136
-    static let maxWidth: CGFloat = 320
+    static let maxWidth: CGFloat = 500
     private(set) static var preferredWidth: CGFloat = width
 
     private let model: TerminalSidebarModel
@@ -569,9 +569,6 @@ private struct TerminalSidebarRow: View {
                 RoundedRectangle(cornerRadius: 2)
                     .fill(Color(nsColor: tabColor))
                     .frame(width: 3)
-            } else {
-                Color.clear
-                    .frame(width: 3)
             }
 
             if isEditing {
@@ -604,7 +601,8 @@ private struct TerminalSidebarRow: View {
                 )
             }
         }
-        .padding(.horizontal, 7)
+        .padding(.leading, 10)
+        .padding(.trailing, 7)
         .frame(height: 32)
         .background(rowBackground)
         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -780,7 +778,7 @@ private final class TerminalSidebarClickView: NSView {
     private func contextMenu() -> NSMenu {
         let menu = NSMenu()
         let rename = NSMenuItem(
-            title: "Rename Tab",
+            title: "Rename Terminal",
             action: #selector(renameSession),
             keyEquivalent: "")
         rename.target = self

@@ -90,6 +90,8 @@ enum AppIcon: Equatable, Codable, Sendable {
 actor AppIconUpdater {
     func update(icon: AppIcon?) {
         UserDefaults.ghostty.appIcon = icon
+        let image = (icon ?? Self.defaultIcon)?.image(in: .main)
+
         // Notify DockTilePlugin to update dock icon
         DistributedNotificationCenter.default()
             .postNotificationName(
@@ -99,11 +101,23 @@ actor AppIconUpdater {
                 deliverImmediately: true,
             )
 
+        Task { @MainActor in
+            NSApplication.shared.applicationIconImage = image
+        }
+
         NSWorkspace.shared.setIcon(
-            icon?.image(in: .main),
+            image,
             forFile: Bundle.main.bundlePath,
         )
         NSWorkspace.shared.noteFileSystemChanged(Bundle.main.bundlePath)
+    }
+
+    private static var defaultIcon: AppIcon? {
+        #if DEBUG
+        return .blueprint
+        #else
+        return nil
+        #endif
     }
 }
 #endif
