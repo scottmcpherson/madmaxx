@@ -463,9 +463,7 @@ private struct TerminalSidebarView: View {
             }
 
             if let updateViewModel {
-                TerminalSidebarUpdateFooter(
-                    model: updateViewModel,
-                    theme: model.theme)
+                TerminalSidebarUpdateFooter(model: updateViewModel)
             }
         }
         .frame(
@@ -484,22 +482,16 @@ private struct TerminalSidebarView: View {
 
 private struct TerminalSidebarUpdateFooter: View {
     @ObservedObject var model: UpdateViewModel
-    let theme: TerminalSidebarTheme
 
     var body: some View {
         if !model.state.isIdle {
-            VStack(spacing: 7) {
-                Rectangle()
-                    .fill(Color(nsColor: theme.separator))
-                    .frame(height: 0.5)
-
-                HStack {
-                    Spacer()
-                    TerminalSidebarUpdateButton(model: model)
-                }
-                .padding(.horizontal, 9)
-                .padding(.bottom, 9)
+            HStack {
+                Spacer()
+                TerminalSidebarUpdateButton(model: model)
             }
+            .padding(.horizontal, 9)
+            .padding(.top, 7)
+            .padding(.bottom, 9)
         }
     }
 }
