@@ -65,8 +65,10 @@ class TerminalWindow: NSWindow {
     /// Whether this window supports the update accessory. If this is false, then views within this
     /// window should determine how to show update notifications.
     var supportsUpdateAccessory: Bool {
-        // Native window supports it.
-        true
+        // The native titlebar accessory can collide with toolbar/window controls
+        // depending on titlebar style, so update notifications use the terminal
+        // overlay instead.
+        false
     }
 
     /// Glass effect view for liquid glass background when transparency is enabled
