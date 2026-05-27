@@ -1180,10 +1180,9 @@ class BaseTerminalController: NSWindowController,
     }
 
     func defaultUpdateOverlayVisibility() -> Bool {
-        guard let window else { return true }
-
         // No titlebar we always show the update overlay because it can't support
         // updates in the titlebar
+        guard let window else { return true }
         guard window.styleMask.contains(.titled) else {
             return true
         }
@@ -1192,6 +1191,12 @@ class BaseTerminalController: NSWindowController,
         // so we always want to show the overlay.
         guard let window = window as? TerminalWindow else {
             return true
+        }
+
+        // Sidebar windows render update notifications inside the sidebar while
+        // the sidebar is visible. If collapsed, fall back to the terminal overlay.
+        if window.derivedConfig.macosTitlebarStyle == .sidebar {
+            return window.isSidebarCollapsed
         }
 
         // Show the overlay if the window isn't.
@@ -1203,7 +1208,7 @@ class BaseTerminalController: NSWindowController,
     /// Check whether window should be closed without showing an alert
     func windowCanBeClosedWithoutConfirmation() -> Bool {
         // We must have a window. Is it even possible not to?
-        guard let window = self.window else { return true }
+        guard self.window != nil else { return true }
 
         // If we have no surfaces, close.
         if surfaceTree.isEmpty { return true }

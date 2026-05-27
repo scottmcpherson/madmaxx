@@ -79,7 +79,10 @@ final class TerminalSidebarController {
 
     init(hostWindow: TerminalWindow) {
         self.model = TerminalSidebarModel(hostWindow: hostWindow)
-        let hostingView = NSHostingView(rootView: TerminalSidebarView(model: model))
+        let updateViewModel = (NSApp.delegate as? AppDelegate)?.updateViewModel
+        let hostingView = NSHostingView(rootView: TerminalSidebarView(
+            model: model,
+            updateViewModel: updateViewModel))
         hostingView.translatesAutoresizingMaskIntoConstraints = false
         self.view = hostingView
     }
@@ -425,6 +428,7 @@ private struct TerminalSidebarSession: Identifiable, Equatable {
 
 private struct TerminalSidebarView: View {
     @ObservedObject var model: TerminalSidebarModel
+    let updateViewModel: UpdateViewModel?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -457,6 +461,12 @@ private struct TerminalSidebarView: View {
                 .padding(.top, 7)
                 .padding(.bottom, 8)
             }
+
+            if let updateViewModel {
+                TerminalSidebarUpdateFooter(
+                    model: updateViewModel,
+                    theme: model.theme)
+            }
         }
         .frame(
             minWidth: TerminalSidebarController.minWidth,
@@ -469,6 +479,82 @@ private struct TerminalSidebarView: View {
         }
         .environment(\.colorScheme, model.theme.colorScheme)
         .accessibilityIdentifier("TerminalSidebar")
+    }
+}
+
+private struct TerminalSidebarUpdateFooter: View {
+    @ObservedObject var model: UpdateViewModel
+    let theme: TerminalSidebarTheme
+
+    var body: some View {
+        if !model.state.isIdle {
+            VStack(spacing: 7) {
+                Rectangle()
+                    .fill(Color(nsColor: theme.separator))
+                    .frame(height: 0.5)
+
+                HStack {
+                    Spacer()
+                    TerminalSidebarUpdateButton(model: model)
+                }
+                .padding(.horizontal, 9)
+                .padding(.bottom, 9)
+            }
+        }
+    }
+}
+
+private struct TerminalSidebarUpdateButton: View {
+    @ObservedObject var model: UpdateViewModel
+    @State private var showPopover = false
+    @State private var resetTask: Task<Void, Never>?
+
+    var body: some View {
+        Button(action: {
+            if case .notFound(let notFound) = model.state {
+                model.state = .idle
+                notFound.acknowledgement()
+            } else {
+                showPopover.toggle()
+            }
+        }, label: {
+            UpdateBadge(model: model)
+                .frame(width: 14, height: 14)
+                .frame(width: 28, height: 28)
+                .background(
+                    Circle()
+                        .fill(model.backgroundColor)
+                )
+                .overlay {
+                    Circle()
+                        .stroke(.white.opacity(0.16), lineWidth: 0.5)
+                }
+                .contentShape(Circle())
+        })
+        .buttonStyle(.plain)
+        .foregroundColor(model.foregroundColor)
+        .help(model.text)
+        .accessibilityLabel(model.text)
+        .popover(isPresented: $showPopover, arrowEdge: .trailing) {
+            UpdatePopoverView(model: model)
+        }
+        .onDisappear {
+            resetTask?.cancel()
+            resetTask = nil
+        }
+        .onChange(of: model.state) { newState in
+            resetTask?.cancel()
+            if case .notFound(let notFound) = newState {
+                resetTask = Task { [weak model] in
+                    try? await Task.sleep(for: .seconds(5))
+                    guard !Task.isCancelled, case .notFound? = model?.state else { return }
+                    model?.state = .idle
+                    notFound.acknowledgement()
+                }
+            } else {
+                resetTask = nil
+            }
+        }
     }
 }
 
