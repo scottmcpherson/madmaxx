@@ -1,26 +1,45 @@
 <!-- LOGO -->
-<h1>
-<p align="center">
+<h1 align="center">
   <img src="images/icons/icon_1024.png" alt="Mosttly Ghostty logo" width="128">
-  <br>Mosttly Ghostty
+  <br>
+  Mosttly Ghostty
 </h1>
-  <p align="center">
-    An unofficial Ghostty fork with sidebar-first tab/session changes.
-    <br />
-    Built for parallel agentic engineering.
-    <br />
-    Based on Ghostty, a fast native terminal emulator and embeddable <code>libghostty</code> library.
-    <br />
-    <a href="#about">About</a>
-    ·
-    <a href="https://github.com/ghostty-org/ghostty">Upstream Ghostty</a>
-    ·
-    <a href="NOTICE">Notice</a>
-    ·
-    <a href="https://ghostty.org/docs">Documentation</a>
-    ·
-    <a href="HACKING.md">Developing</a>
-  </p>
+
+<p align="center">
+  An unofficial Ghostty fork focused on sidebar-first sessions and parallel coding agents.
+  <br>
+  Built for agent-driven engineering workflows on macOS.
+</p>
+
+<p align="center">
+  <a href="#download">Download</a>
+  ·
+  <a href="#whats-different">What's Different</a>
+  ·
+  <a href="#project-scope">Scope</a>
+  ·
+  <a href="#platform-and-agent-status">Status</a>
+  ·
+  <a href="https://github.com/ghostty-org/ghostty">Upstream Ghostty</a>
+  ·
+  <a href="NOTICE">Notice</a>
+</p>
+
+<p align="center">
+  <img
+    src="images/mosttly-agent-sessions.png"
+    alt="Mosttly Ghostty preview showing sidebar sessions running multiple coding agents"
+    width="920"
+  >
+</p>
+
+<p align="center">
+  <a href="https://github.com/scottmcpherson/mosttly-ghostty/releases/latest/download/Mosttly.dmg">
+    <img alt="Download macOS DMG" src="https://img.shields.io/badge/Download-macOS%20DMG-111111?style=for-the-badge&logo=apple&logoColor=white">
+  </a>
+  <a href="https://github.com/scottmcpherson/mosttly-ghostty/releases">
+    <img alt="View releases" src="https://img.shields.io/badge/View-Releases-346beb?style=for-the-badge&logo=github&logoColor=white">
+  </a>
 </p>
 
 ## Fork Notice
@@ -32,36 +51,52 @@ endorsed by, or maintained by the Ghostty project.
 The original Ghostty source is licensed under the MIT License. See
 [LICENSE](LICENSE) and [NOTICE](NOTICE). Upstream documentation at
 [ghostty.org/docs](https://ghostty.org/docs) generally applies, but this fork
-may differ where sidebar tabs/sessions and local distribution behavior have
-been changed.
+may differ where sidebar tabs, sessions, agent statuses, and local distribution
+behavior have changed.
 
-## Sidebar Agent Statuses
+## What's Different
 
-The sidebar tab/session UI and sidebar agent status indicators are currently
-macOS-only. The underlying hook event pipeline is shared infrastructure, but
-Linux/GTK does not yet expose these statuses in the UI.
+Mosttly Ghostty keeps Ghostty's fast native terminal core and adds a workflow
+layer for people running multiple coding agents in parallel.
 
-On macOS, agent status indicators are currently supported automatically for
-Claude Code and Codex. Other CLIs can use the same underlying hook event
-pipeline, but they do not have built-in integration yet. Support for the X.ai
-CLI and Gemini CLI is in progress.
+- Sidebar-first tab and session organization.
+- Sidebar agent status indicators for supported CLIs.
+- A macOS-first distribution path for the fork.
+- Fork-specific release artifacts published from `mosttly-v*` tags.
 
-## About
+## Project Scope
 
-Ghostty is a terminal emulator that differentiates itself by being
-fast, feature-rich, and native. While there are many excellent terminal
-emulators available, they all force you to choose between speed,
-features, or native UIs. Ghostty provides all three.
+Mosttly Ghostty's north star is to stay a lightweight, high-performance Ghostty
+terminal for running multiple coding agents in parallel.
 
-**`libghostty`** is a cross-platform, zero-dependency C and Zig library
-for building terminal emulators or utilizing terminal functionality
-(such as style parsing). Anyone can use `libghostty` to build a terminal
-emulator or embed a terminal into their own applications. See
-[Ghostling](https://github.com/ghostty-org/ghostling) for a minimal complete project
-example or the [`examples` directory](https://github.com/ghostty-org/ghostty/tree/main/example)
-for smaller examples of using `libghostty` in C and Zig.
+In practice, this fork should remain close to "Ghostty with a sidebar and agent
+statuses." Changes should preserve Ghostty's terminal feel, keep resource
+overhead low, and avoid turning the app into a separate agent-management
+product. That matters because agent workflows already consume meaningful CPU,
+memory, and battery, and because staying close to upstream Ghostty keeps
+long-term cherry-picks and maintenance feasible.
 
-For more details, see [About Ghostty](https://ghostty.org/docs/about).
+Good fit:
+
+- Agent status integrations for additional terminal-first CLIs, such as Grok,
+  Gemini, or other coding agents.
+- Sidebar and session polish that improves switching between parallel agent
+  terminals.
+- Terminal correctness, performance, rename, copy/paste, and macOS integration
+  bug fixes.
+- Small release, packaging, or distribution improvements for this fork.
+
+Out of scope:
+
+- Built-in browser panels, dashboards, task boards, or other heavyweight app
+  surfaces.
+- Agent orchestration or management UI beyond exposing terminal session status.
+- Features that significantly increase idle resource usage or make upstream
+  Ghostty updates difficult.
+- General-purpose workflow features better handled by agent CLIs or external
+  tools.
+
+When in doubt, prefer terminal-native, lightweight, and upstream-friendly.
 
 ## Download
 
@@ -75,185 +110,79 @@ These builds are produced from `mosttly-v*` release tags. Until Developer ID
 signing and notarization are configured for this fork, macOS may require
 right-clicking the app and choosing Open the first time it launches.
 
+## Platform and Agent Status
+
+| Area | Status |
+| --- | --- |
+| macOS sidebar tabs/sessions | Supported |
+| macOS sidebar agent statuses | Supported |
+| Linux/GTK sidebar agent statuses | Not exposed in the UI yet |
+| Claude Code status integration | Supported automatically |
+| Codex status integration | Supported automatically |
+| X.ai CLI status integration | In progress |
+| Gemini CLI status integration | In progress |
+
+The underlying hook event pipeline is shared infrastructure. Other CLIs can use
+that pipeline, but only Claude Code and Codex currently have built-in status
+integration.
+
 ## Documentation
 
-See the [documentation](https://ghostty.org/docs) on the Ghostty website.
+Most general terminal behavior, configuration, and platform documentation comes
+from upstream Ghostty:
 
-## Contributing and Developing
+- [Ghostty documentation](https://ghostty.org/docs)
+- [Upstream Ghostty repository](https://github.com/ghostty-org/ghostty)
+- [About Ghostty](https://ghostty.org/docs/about)
 
-If you have any ideas, issues, etc. regarding Ghostty, or would like to
-contribute to Ghostty through pull requests, please check out our
-["Contributing to Ghostty"](CONTRIBUTING.md) document. Those who would like
-to get involved with Ghostty's development as well should also read the
-["Developing Ghostty"](HACKING.md) document for more technical details.
+Fork-specific behavior is documented in this repository as it diverges from
+upstream.
 
-## Roadmap and Status
+## Building from Source
 
-Ghostty is stable and in use by millions of people and machines daily.
+Mosttly Ghostty follows the upstream Ghostty build system:
 
-The high-level ambitious plan for the project, in order:
-
-|  #  | Step                                                    | Status |
-| :-: | ------------------------------------------------------- | :----: |
-|  1  | Standards-compliant terminal emulation                  |   ✅   |
-|  2  | Competitive performance                                 |   ✅   |
-|  3  | Rich windowing features -- multi-window, tabbing, panes |   ✅   |
-|  4  | Native Platform Experiences                             |   ✅   |
-|  5  | Cross-platform `libghostty` for Embeddable Terminals    |   ✅   |
-|  6  | Ghostty-only Terminal Control Sequences                 |   ❌   |
-
-Additional details for each step in the big roadmap below:
-
-#### Standards-Compliant Terminal Emulation
-
-Ghostty implements all of the regularly used control sequences and
-can run every mainstream terminal program without issue. For legacy sequences,
-we've done a [comprehensive xterm audit](https://github.com/ghostty-org/ghostty/issues/632)
-comparing Ghostty's behavior to xterm and building a set of conformance
-test cases.
-
-In addition to legacy sequences (what you'd call real "terminal" emulation),
-Ghostty also supports more modern sequences than almost any other terminal
-emulator. These features include things like the Kitty graphics protocol,
-Kitty image protocol, clipboard sequences, synchronized rendering,
-light/dark mode notifications, and many, many more.
-
-We believe Ghostty is one of the most compliant and feature-rich terminal
-emulators available.
-
-Terminal behavior is partially a de jure standard
-(i.e. [ECMA-48](https://ecma-international.org/publications-and-standards/standards/ecma-48/))
-but mostly a de facto standard as defined by popular terminal emulators
-worldwide. Ghostty takes the approach that our behavior is defined by
-(1) standards, if available, (2) xterm, if the feature exists, (3)
-other popular terminals, in that order. This defines what the Ghostty project
-views as a "standard."
-
-#### Competitive Performance
-
-Ghostty is generally in the same performance category as the other highest
-performing terminal emulators.
-
-"The same performance category" means that Ghostty is much faster than
-traditional or "slow" terminals and is within an unnoticeable margin of the
-well-known "fast" terminals. For example, Ghostty and Alacritty are usually within
-a few percentage points of each other on various benchmarks, but are both
-something like 100x faster than Terminal.app and iTerm. However, Ghostty
-is much more feature rich than Alacritty and has a much more native app
-experience.
-
-This performance is achieved through high-level architectural decisions and
-low-level optimizations. At a high-level, Ghostty has a multi-threaded
-architecture with a dedicated read thread, write thread, and render thread
-per terminal. Our renderer uses OpenGL on Linux and Metal on macOS.
-Our read thread has a heavily optimized terminal parser that leverages
-CPU-specific SIMD instructions. Etc.
-
-#### Rich Windowing Features
-
-The Mac and Linux (build with GTK) apps support multi-window, tabbing, and
-splits with additional features such as tab renaming, coloring, etc. These
-features allow for a higher degree of organization and customization than
-single-window terminals.
-
-#### Native Platform Experiences
-
-Ghostty is a cross-platform terminal emulator but we don't aim for a
-least-common-denominator experience. There is a large, shared core written
-in Zig but we do a lot of platform-native things:
-
-- The macOS app is a true SwiftUI-based application with all the things you
-  would expect such as real windowing, menu bars, a settings GUI, etc.
-- macOS uses a true Metal renderer with CoreText for font discovery.
-- macOS supports AppleScript, Apple Shortcuts (AppIntents), etc.
-- The Linux app is built with GTK.
-- The Linux app integrates deeply with systemd if available for things
-  like always-on, new windows in a single instance, cgroup isolation, etc.
-
-Our goal with Ghostty is for users of whatever platform they run Ghostty
-on to think that Ghostty was built for their platform first and maybe even
-exclusively. We want Ghostty to feel like a native app on every platform,
-for the best definition of "native" on each platform.
-
-#### Cross-platform `libghostty` for Embeddable Terminals
-
-In addition to being a standalone terminal emulator, Ghostty is a
-C-compatible library for embedding a fast, feature-rich terminal emulator
-in any 3rd party project. This library is called `libghostty`.
-
-Due to the scope of this project, we're breaking libghostty down into
-separate libraries, starting with `libghostty-vt`. The goal of
-this project is to focus on parsing terminal sequences and maintaining
-terminal state. This is covered in more detail in this
-[blog post](https://mitchellh.com/writing/libghostty-is-coming).
-
-`libghostty-vt` is already available and usable today for Zig and C and
-is compatible for macOS, Linux, Windows, and WebAssembly. The functionality
-is extremely stable (since its been proven in Ghostty GUI for a long time),
-but the API signatures are still in flux.
-
-`libghostty` is already heavily in use. See [`examples`](https://github.com/ghostty-org/ghostty/tree/main/example)
-for small examples of using `libghostty` in C and Zig or the
-[Ghostling](https://github.com/ghostty-org/ghostling) project for a
-complete example. See [awesome-libghostty](https://github.com/Uzaaft/awesome-libghostty)
-for a list of projects and resources related to `libghostty`.
-
-We haven't tagged libghostty with a version yet and we're still working
-on a better docs experience, but our [Doxygen website](https://libghostty.tip.ghostty.org/)
-is a good resource for the C API.
-
-#### Ghostty-only Terminal Control Sequences
-
-We want and believe that terminal applications can and should be able
-to do so much more. We've worked hard to support a wide variety of modern
-sequences created by other terminal emulators towards this end, but we also
-want to fill the gaps by creating our own sequences.
-
-We've been hesitant to do this up until now because we don't want to create
-more fragmentation in the terminal ecosystem by creating sequences that only
-work in Ghostty. But, we do want to balance that with the desire to push the
-terminal forward with stagnant standards and the slow pace of change in the
-terminal ecosystem.
-
-We haven't done any of this yet.
-
-## Crash Reports
-
-Ghostty has a built-in crash reporter that will generate and save crash
-reports to disk. The crash reports are saved to the `$XDG_STATE_HOME/ghostty/crash`
-directory. If `$XDG_STATE_HOME` is not set, the default is `~/.local/state`.
-**Crash reports are _not_ automatically sent anywhere off your machine.**
-
-Crash reports are only generated the next time Ghostty is started after a
-crash. If Ghostty crashes and you want to generate a crash report, you must
-restart Ghostty at least once. You should see a message in the log that a
-crash report was generated.
-
-> [!NOTE]
->
-> Use the `ghostty +crash-report` CLI command to get a list of available crash
-> reports. A future version of Ghostty will make the contents of the crash
-> reports more easily viewable through the CLI and GUI.
-
-Crash reports end in the `.ghosttycrash` extension. The crash reports are in
-[Sentry envelope format](https://develop.sentry.dev/sdk/envelopes/). You can
-upload these to your own Sentry account to view their contents, but the format
-is also publicly documented so any other available tools can also be used.
-The `ghostty +crash-report` CLI command can be used to list any crash reports.
-A future version of Ghostty will show you the contents of the crash report
-directly in the terminal.
-
-To send the crash report to the Ghostty project, you can use the following
-CLI command using the [Sentry CLI](https://docs.sentry.io/cli/installation/):
-
-```shell-session
-SENTRY_DSN=https://e914ee84fd895c4fe324afa3e53dac76@o4507352570920960.ingest.us.sentry.io/4507850923638784 sentry-cli send-envelope --raw <path to ghostty crash>
+```shell
+zig build
 ```
 
-> [!WARNING]
->
-> The crash report can contain sensitive information. The report doesn't
-> purposely contain sensitive information, but it does contain the full
-> stack memory of each thread at the time of the crash. This information
-> is used to rebuild the stack trace but can also contain sensitive data
-> depending on when the crash occurred.
+On macOS, if you do not need to build the app bundle while working on shared
+code, this is faster:
+
+```shell
+zig build -Demit-macos-app=false
+```
+
+Run Zig tests with:
+
+```shell
+zig build test
+```
+
+Prefer targeted tests while developing:
+
+```shell
+zig build test -Dtest-filter=<test name>
+```
+
+See [HACKING.md](HACKING.md) for upstream development details and
+[AGENTS.md](AGENTS.md) for local agent workflow notes.
+
+## Contributing
+
+For changes specific to Mosttly Ghostty, open issues or pull requests against
+this fork. For behavior that also affects upstream Ghostty, check the upstream
+[Contributing to Ghostty](CONTRIBUTING.md) guidance and consider whether the
+change belongs upstream first.
+
+## Upstream Ghostty
+
+Ghostty is a fast, feature-rich, native terminal emulator and embeddable
+`libghostty` library. Mosttly Ghostty builds on that foundation and keeps
+upstream licensing and attribution intact.
+
+For broader Ghostty project status, roadmap, terminal compliance details,
+`libghostty`, and crash report documentation, use the upstream documentation:
+
+- [ghostty.org/docs](https://ghostty.org/docs)
+- [github.com/ghostty-org/ghostty](https://github.com/ghostty-org/ghostty)

@@ -239,6 +239,7 @@ private final class TerminalSidebarModel: ObservableObject {
 
     func rename(_ session: TerminalSidebarSession) {
         editingSessionID = session.id
+        resignSelectedTerminalFocus()
     }
 
     func commitRename(_ session: TerminalSidebarSession, title: String) {
@@ -344,6 +345,19 @@ private final class TerminalSidebarModel: ObservableObject {
     private func focusSelectedTerminal() {
         guard let hostWindow else { return }
         focusTerminal(in: hostWindow.tabGroup?.selectedWindow ?? hostWindow)
+    }
+
+    private func resignSelectedTerminalFocus() {
+        guard let hostWindow else { return }
+        let selectedWindow = hostWindow.tabGroup?.selectedWindow ?? hostWindow
+        guard let controller = selectedWindow.windowController as? BaseTerminalController
+        else { return }
+
+        // SurfaceView uses its cached focus state to decide whether it should consume
+        // key equivalents. Yield it so copy/paste reaches the inline rename field.
+        guard let focusedSurface = controller.focusedSurface else { return }
+        _ = focusedSurface.resignFirstResponder()
+        focusedSurface.focusDidChange(false)
     }
 
     private func focusTerminal(in window: NSWindow) {
@@ -560,7 +574,6 @@ private struct TerminalSidebarRow: View {
     let onCommitRename: (String) -> Void
     let onCancelRename: () -> Void
 
-    @FocusState private var isRenameFieldFocused: Bool
     @State private var draftTitle = ""
 
     var body: some View {
@@ -572,17 +585,13 @@ private struct TerminalSidebarRow: View {
             }
 
             if isEditing {
-                TextField("Session Name", text: $draftTitle)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12.5, weight: .semibold))
-                    .foregroundStyle(Color(nsColor: theme.foreground))
-                    .tint(Color(nsColor: theme.foreground))
-                    .focused($isRenameFieldFocused)
-                    .lineLimit(1)
+                TerminalSidebarRenameField(
+                    text: $draftTitle,
+                    textColor: theme.foreground,
+                    onCommit: commitRename,
+                    onCancel: onCancelRename
+                )
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .onSubmit(commitRename)
-                    .onExitCommand(perform: onCancelRename)
-                    .accessibilityIdentifier("TerminalSidebarRenameField")
             } else {
                 Text(session.title)
                     .font(.system(size: 12.5, weight: .regular))
@@ -625,23 +634,11 @@ private struct TerminalSidebarRow: View {
         .onAppear {
             guard isEditing else { return }
             draftTitle = session.title
-            DispatchQueue.main.async {
-                isRenameFieldFocused = true
-            }
         }
         .onChange(of: isEditing) { newValue in
             if newValue {
                 draftTitle = session.title
-                DispatchQueue.main.async {
-                    isRenameFieldFocused = true
-                }
-            } else {
-                isRenameFieldFocused = false
             }
-        }
-        .onChange(of: isRenameFieldFocused) { focused in
-            guard isEditing, !focused else { return }
-            commitRename()
         }
     }
 
@@ -667,6 +664,156 @@ private struct TerminalSidebarRow: View {
 
     private func commitRename() {
         onCommitRename(draftTitle)
+    }
+}
+
+private struct TerminalSidebarRenameField: NSViewRepresentable {
+    @Binding var text: String
+    let textColor: NSColor
+    let onCommit: () -> Void
+    let onCancel: () -> Void
+
+    func makeNSView(context: Context) -> NSTextField {
+        let textField = TerminalSidebarRenameTextField(frame: .zero)
+        textField.delegate = context.coordinator
+        textField.isBordered = false
+        textField.isBezeled = false
+        textField.drawsBackground = false
+        textField.focusRingType = .none
+        textField.lineBreakMode = .byClipping
+        textField.font = .systemFont(ofSize: 12.5, weight: .semibold)
+        textField.textColor = textColor
+        textField.isEditable = true
+        textField.isSelectable = true
+        textField.setAccessibilityIdentifier("TerminalSidebarRenameField")
+
+        if let cell = textField.cell as? NSTextFieldCell {
+            cell.wraps = false
+            cell.usesSingleLineMode = true
+            cell.isScrollable = true
+        }
+
+        return textField
+    }
+
+    func updateNSView(_ textField: NSTextField, context: Context) {
+        context.coordinator.parent = self
+        textField.textColor = textColor
+
+        if textField.stringValue != text {
+            textField.stringValue = text
+        }
+
+        context.coordinator.focusIfNeeded(textField)
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: TerminalSidebarRenameField
+        private var didRequestFocus = false
+        private var didFocus = false
+        private var didFinish = false
+
+        init(_ parent: TerminalSidebarRenameField) {
+            self.parent = parent
+        }
+
+        func focusIfNeeded(_ textField: NSTextField) {
+            guard !didRequestFocus else { return }
+            didRequestFocus = true
+            focus(textField, attemptsRemaining: 5)
+        }
+
+        private func focus(_ textField: NSTextField, attemptsRemaining: Int) {
+            DispatchQueue.main.async { [weak textField] in
+                guard let textField else { return }
+                guard let window = textField.window else {
+                    if attemptsRemaining > 0 {
+                        self.focus(textField, attemptsRemaining: attemptsRemaining - 1)
+                    }
+                    return
+                }
+
+                guard window.makeFirstResponder(textField) else { return }
+                textField.selectText(nil)
+                if let editor = textField.currentEditor() {
+                    window.makeFirstResponder(editor)
+                    editor.selectAll(nil)
+                }
+                self.didFocus = true
+            }
+        }
+
+        func controlTextDidChange(_ obj: Notification) {
+            guard let textField = obj.object as? NSTextField else { return }
+            parent.text = textField.stringValue
+        }
+
+        func control(
+            _: NSControl,
+            textView _: NSTextView,
+            doCommandBy commandSelector: Selector
+        ) -> Bool {
+            if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+                finish(parent.onCommit)
+                return true
+            }
+
+            if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
+                finish(parent.onCancel)
+                return true
+            }
+
+            return false
+        }
+
+        func controlTextDidEndEditing(_ obj: Notification) {
+            guard didFocus else { return }
+            guard let textField = obj.object as? NSTextField else { return }
+            parent.text = textField.stringValue
+            finish(parent.onCommit)
+        }
+
+        private func finish(_ action: () -> Void) {
+            guard !didFinish else { return }
+            didFinish = true
+            action()
+        }
+    }
+}
+
+private final class TerminalSidebarRenameTextField: NSTextField {
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard event.type == .keyDown,
+              event.modifierFlags.contains(.command),
+              !event.modifierFlags.contains(.control),
+              !event.modifierFlags.contains(.option),
+              let character = event.charactersIgnoringModifiers?.lowercased()
+        else {
+            return super.performKeyEquivalent(with: event)
+        }
+
+        guard let editor = currentEditor() else {
+            return super.performKeyEquivalent(with: event)
+        }
+
+        switch character {
+        case "a":
+            editor.selectAll(nil)
+        case "c":
+            editor.copy(nil)
+        case "v":
+            editor.paste(nil)
+        case "x":
+            editor.cut(nil)
+        default:
+            return super.performKeyEquivalent(with: event)
+        }
+
+        return true
     }
 }
 
@@ -771,34 +918,49 @@ private final class TerminalSidebarClickView: NSView {
         }
     }
 
-    override func rightMouseDown(with event: NSEvent) {
-        NSMenu.popUpContextMenu(contextMenu(), with: event, for: self)
+    override func menu(for event: NSEvent) -> NSMenu? {
+        contextMenu()
     }
 
     private func contextMenu() -> NSMenu {
         let menu = NSMenu()
-        let rename = NSMenuItem(
+
+        let rename = TerminalSidebarMenuItem(
             title: "Rename Terminal",
-            action: #selector(renameSession),
-            keyEquivalent: "")
-        rename.target = self
+            action: #selector(TerminalSidebarMenuItem.renameSession(_:)),
+            handler: { [onRename] in onRename?() }
+        )
         menu.addItem(rename)
 
-        let close = NSMenuItem(
+        let close = TerminalSidebarMenuItem(
             title: "Close",
-            action: #selector(closeSession),
-            keyEquivalent: "")
-        close.target = self
+            action: #selector(TerminalSidebarMenuItem.closeSession(_:)),
+            handler: { [onClose] in onClose?() }
+        )
         menu.addItem(close)
 
         return menu
     }
+}
 
-    @objc private func renameSession() {
-        onRename?()
+private final class TerminalSidebarMenuItem: NSMenuItem {
+    private let handler: () -> Void
+
+    init(title: String, action: Selector, handler: @escaping () -> Void) {
+        self.handler = handler
+        super.init(title: title, action: action, keyEquivalent: "")
+        target = self
     }
 
-    @objc private func closeSession() {
-        onClose?()
+    required init(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    @objc func renameSession(_: NSMenuItem) {
+        handler()
+    }
+
+    @objc func closeSession(_: NSMenuItem) {
+        handler()
     }
 }

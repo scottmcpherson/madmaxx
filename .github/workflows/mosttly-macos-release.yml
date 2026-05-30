@@ -287,6 +287,7 @@ jobs:
                 --target "$GITHUB_SHA" \
                 --title "Mosttly Ghostty $VERSION" \
                 --notes "macOS build for Mosttly Ghostty $VERSION." \
+                --generate-notes \
                 --prerelease \
                 Mosttly.dmg \
                 Mosttly-macOS-universal.zip \
@@ -296,6 +297,7 @@ jobs:
                 --target "$GITHUB_SHA" \
                 --title "Mosttly Ghostty $VERSION" \
                 --notes "macOS build for Mosttly Ghostty $VERSION." \
+                --generate-notes \
                 Mosttly.dmg \
                 Mosttly-macOS-universal.zip \
                 appcast.xml
