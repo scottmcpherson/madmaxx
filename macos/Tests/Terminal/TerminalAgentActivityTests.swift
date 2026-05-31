@@ -92,6 +92,49 @@ struct TerminalAgentActivityTests {
         #expect(reducer.state == .idle)
     }
 
+    @Test func acknowledgedAttentionIgnoresIdleNotification() throws {
+        var reducer = TerminalAgentActivityReducer()
+        let surfaceID = "surface-1"
+
+        // A turn runs, finishes, and the user acknowledges the indicator.
+        #expect(reducer.apply(event("prompt-submit", state: "running", sessionID: "s1"), expectedSurfaceID: surfaceID) == .running(agent: "claude"))
+        #expect(reducer.apply(event("stop", state: nil, sessionID: "s1"), expectedSurfaceID: surfaceID) == .needsInput(agent: "claude"))
+        #expect(reducer.acknowledgeAttention() == .idle)
+
+        // Claude's idle "waiting for input" Notification hook re-fires ~60s
+        // later for the same session: it must not re-light the indicator.
+        #expect(reducer.apply(event("notification", state: "needsInput", sessionID: "s1"), expectedSurfaceID: surfaceID) == nil)
+        #expect(reducer.state == .idle)
+
+        // A redundant stop for the same idle session is likewise ignored.
+        #expect(reducer.apply(event("stop", state: nil, sessionID: "s1"), expectedSurfaceID: surfaceID) == nil)
+        #expect(reducer.state == .idle)
+    }
+
+    @Test func newTurnReArmsAcknowledgedAttention() throws {
+        var reducer = TerminalAgentActivityReducer()
+
+        #expect(reducer.apply(event("prompt-submit", state: "running", sessionID: "s1")) == .running(agent: "claude"))
+        #expect(reducer.apply(event("stop", state: nil, sessionID: "s1")) == .needsInput(agent: "claude"))
+        #expect(reducer.acknowledgeAttention() == .idle)
+        #expect(reducer.apply(event("notification", state: "needsInput", sessionID: "s1")) == nil)
+
+        // Submitting a new prompt re-arms attention, so the next stop lights it.
+        #expect(reducer.apply(event("prompt-submit", state: "running", sessionID: "s1")) == .running(agent: "claude"))
+        #expect(reducer.apply(event("stop", state: nil, sessionID: "s1")) == .needsInput(agent: "claude"))
+    }
+
+    @Test func errorSurfacesAfterAcknowledgement() throws {
+        var reducer = TerminalAgentActivityReducer()
+
+        #expect(reducer.apply(event("stop", state: nil, sessionID: "s1")) == .needsInput(agent: "claude"))
+        #expect(reducer.acknowledgeAttention() == .idle)
+
+        // Errors are not suppressed by acknowledgement; they always surface.
+        #expect(reducer.apply(event("hook-error", state: nil, sessionID: "s1")) == .error(agent: "claude"))
+        #expect(reducer.state == .error(agent: "claude"))
+    }
+
     @Test func reducerInterruptsRunningState() throws {
         var reducer = TerminalAgentActivityReducer()
 

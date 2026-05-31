@@ -262,6 +262,14 @@ struct TerminalAgentActivityReducer {
     private var activeSessionIDByAgent: [String: String] = [:]
     private var runningStartedAt: Date?
 
+    /// Agents whose attention indicator the user has already acknowledged while
+    /// the agent sits idle. Cleared when a new turn starts (a `.running`
+    /// transition). Used to ignore redundant "needs input" events — notably
+    /// Claude Code's idle Notification hook, which re-fires ~60s after a turn
+    /// ends while it waits for input — so an acknowledged indicator does not
+    /// re-light itself without any new activity.
+    private var acknowledgedAgents: Set<String> = []
+
     mutating func apply(
         _ event: TerminalAgentActivityEvent,
         expectedSurfaceID: String? = nil,
@@ -276,6 +284,15 @@ struct TerminalAgentActivityReducer {
         let agent = event.normalizedAgent
         guard !agent.isEmpty else { return nil }
         guard let nextState = Self.state(from: event, agent: agent) else { return nil }
+
+        // Once the user has acknowledged an attention indicator, a redundant
+        // "needs input" event for the same idle session must not re-light it.
+        // Only a new turn re-arms attention (see the `.running` case below,
+        // which clears `acknowledgedAgents`). Errors are intentionally not
+        // suppressed here — they always represent new information.
+        if case .needsInput = nextState, acknowledgedAgents.contains(agent) {
+            return nil
+        }
 
         if Self.isSessionBoundaryEvent(event),
            let sessionID = Self.normalized(event.sessionID),
@@ -296,6 +313,7 @@ struct TerminalAgentActivityReducer {
             runningStartedAt = nil
 
         case .running:
+            acknowledgedAgents.remove(agent)
             state = nextState
             runningStartedAt = now
 
@@ -310,6 +328,7 @@ struct TerminalAgentActivityReducer {
     mutating func acknowledgeAttention() -> TerminalAgentActivityState? {
         switch state {
         case .needsInput(let agent), .error(let agent):
+            acknowledgedAgents.insert(agent)
             activeSessionIDByAgent[agent] = nil
             state = .idle
             runningStartedAt = nil
