@@ -356,6 +356,11 @@ class AppDelegate: NSObject,
                 undoManager.enableUndoRegistration()
             }
         }
+
+        // Offer to install the Codex hooks once for users who actually use Codex.
+        // Evaluated on every activation (not just first launch) so the prompt also
+        // reaches users who adopt Codex after installing the app.
+        CodexHooksPromptController.shared.evaluate()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

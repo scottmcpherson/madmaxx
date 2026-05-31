@@ -174,6 +174,8 @@
 				"Features/Secure Input/SecureInput.swift",
 				"Features/Secure Input/SecureInputOverlay.swift",
 				Features/Services/ServiceProvider.swift,
+				Features/Settings/CodexHooksManager.swift,
+				Features/Settings/CodexHooksPrompt.swift,
 				Features/Settings/ConfigurationErrors.xib,
 				Features/Settings/ConfigurationErrorsController.swift,
 				Features/Settings/ConfigurationErrorsView.swift,

@@ -123,9 +123,9 @@ final class SettingsViewModel: ObservableObject {
     @Published private(set) var codexStatus: CodexHooksStatus = .notInstalled
 
     func refresh() {
-        claudeConfigured = Self.isClaudeConfigured()
+        claudeConfigured = CodexHooksManager.claudeConfigured()
         if codexStatus != .installing {
-            codexStatus = Self.codexHooksInstalled() ? .installed : .notInstalled
+            codexStatus = CodexHooksManager.hooksInstalled() ? .installed : .notInstalled
         }
     }
 
@@ -147,17 +147,7 @@ final class SettingsViewModel: ObservableObject {
     }
 
     func revealCodexHooks() {
-        let codexHome = Self.codexHomeURL()
-        let candidates = [
-            codexHome.appendingPathComponent("config.toml"),
-            codexHome.appendingPathComponent("hooks.json"),
-        ]
-        let existing = candidates.filter { FileManager.default.fileExists(atPath: $0.path) }
-        if existing.isEmpty {
-            NSWorkspace.shared.activateFileViewerSelecting([codexHome])
-        } else {
-            NSWorkspace.shared.activateFileViewerSelecting(existing)
-        }
+        CodexHooksManager.revealHooks()
     }
 
     private func runCodexHook(action: String, failureFallback: String) {
@@ -165,98 +155,16 @@ final class SettingsViewModel: ObservableObject {
 
         codexStatus = .installing
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let result = Self.runCodexHookHelper(action: action)
+            let result = CodexHooksManager.runHook(action: action)
             DispatchQueue.main.async {
                 guard let self else { return }
                 if result.success {
-                    self.codexStatus = Self.codexHooksInstalled() ? .installed : .notInstalled
+                    self.codexStatus = CodexHooksManager.hooksInstalled() ? .installed : .notInstalled
                 } else {
                     self.codexStatus = .failed(result.message ?? failureFallback)
                 }
             }
         }
-    }
-
-    private static func isClaudeConfigured() -> Bool {
-        guard let helperURL else { return false }
-        let claudeURL = helperURL.deletingLastPathComponent().appendingPathComponent("claude")
-        return FileManager.default.isExecutableFile(atPath: claudeURL.path)
-    }
-
-    private static func codexHooksInstalled() -> Bool {
-        let codexHome = codexHomeURL()
-        let hooksURL = codexHome.appendingPathComponent("hooks.json")
-        let configURL = codexHome.appendingPathComponent("config.toml")
-
-        guard let hooks = try? String(contentsOf: hooksURL, encoding: .utf8),
-              let config = try? String(contentsOf: configURL, encoding: .utf8)
-        else {
-            return false
-        }
-
-        return hooks.contains("ghostty-agent-hook") &&
-            hooks.contains(" codex ") &&
-            config.contains("ghostty-agent-codex-hooks-feature begin") &&
-            config.contains("hooks = true")
-    }
-
-    private static func runCodexHookHelper(action: String) -> (success: Bool, message: String?) {
-        guard let helperURL else {
-            return (false, "Hook helper missing.")
-        }
-
-        let process = Process()
-        process.executableURL = helperURL
-        process.arguments = [action, "codex"]
-
-        var environment = ProcessInfo.processInfo.environment
-        if environment["HOME"]?.isEmpty ?? true {
-            environment["HOME"] = NSHomeDirectory()
-        }
-        process.environment = environment
-
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            return (false, error.localizedDescription)
-        }
-
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        let output = String(data: data, encoding: .utf8)?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-
-        guard process.terminationStatus == 0 else {
-            return (false, output.isEmpty ? nil : output)
-        }
-
-        return (true, nil)
-    }
-
-    private static func codexHomeURL() -> URL {
-        if let codexHome = ProcessInfo.processInfo.environment["CODEX_HOME"],
-           !codexHome.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return URL(
-                fileURLWithPath: (codexHome as NSString).expandingTildeInPath,
-                isDirectory: true)
-        }
-
-        return URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
-            .appendingPathComponent(".codex", isDirectory: true)
-    }
-
-    private static var helperURL: URL? {
-        guard let resourcesURL = Bundle.main.resourceURL else { return nil }
-        let helperURL = resourcesURL
-            .appendingPathComponent("ghostty", isDirectory: true)
-            .appendingPathComponent("bin", isDirectory: true)
-            .appendingPathComponent("ghostty-agent-hook", isDirectory: false)
-
-        return FileManager.default.isExecutableFile(atPath: helperURL.path) ? helperURL : nil
     }
 }
 
