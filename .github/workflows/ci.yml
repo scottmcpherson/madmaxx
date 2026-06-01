@@ -1,4 +1,4 @@
-name: Test
+name: CI
 
 on:
   push: {}
@@ -33,7 +33,7 @@ jobs:
       - name: Check for upstream-only workflow references
         run: |
           set -euo pipefail
-          matches="$(grep -R -n -E 'namespace-profile-ghostty|ghostty-org/ghostty|release\.files\.ghostty\.org|VOUCH_APP|mitchellh/vouch' .github/workflows --exclude=test.yml || true)"
+          matches="$(grep -R -n -E 'namespace-profile-ghostty|ghostty-org/ghostty|release\.files\.ghostty\.org|VOUCH_APP|mitchellh/vouch' .github/workflows --exclude=ci.yml || true)"
           if [[ -n "$matches" ]]; then
             echo "$matches"
             echo "Found upstream-only GitHub Actions references." >&2
