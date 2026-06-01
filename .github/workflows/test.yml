@@ -11,6 +11,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  standalone:
+    name: "Standalone Checks"
+    if: github.repository != 'ghostty-org/ghostty'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip upstream-only CI
+        run: |
+          echo "Ghostty's full CI uses private Namespace runners."
+          echo "Skipping upstream-only CI for ${GITHUB_REPOSITORY}."
+
   # Determines whether other jobs should be skipped. Modify this if there
   # are other fast skip conditions, and add it as an output. Then modify
   # other tests `needs/if` to check them. Document the outputs.
@@ -79,7 +89,7 @@ jobs:
 
   required:
     name: "Required Checks: Test"
-    if: always()
+    if: always() && github.repository == 'ghostty-org/ghostty'
     runs-on: namespace-profile-ghostty-xsm
     needs:
       - skip

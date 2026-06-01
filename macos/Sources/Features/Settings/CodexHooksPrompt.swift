@@ -272,15 +272,14 @@ private struct CodexHooksPromptBanner: View {
         switch model.phase {
         case .prompt:
             HStack(spacing: 8) {
-                Button("Install Hooks", action: model.onInstall)
-                    .buttonStyle(.borderedProminent)
-                    .accessibilityIdentifier("MosttlyCodexHooksPromptInstallButton")
-                Button("Not Now", action: model.onNotNow)
-                    .buttonStyle(.bordered)
                 Button("Don't Ask Again", action: model.onDontAskAgain)
                     .buttonStyle(.plain)
                     .foregroundStyle(Color(nsColor: theme.mutedForeground))
-                closeButton
+                Button("Not Now", action: model.onNotNow)
+                    .buttonStyle(.bordered)
+                Button("Install Hooks", action: model.onInstall)
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("MosttlyCodexHooksPromptInstallButton")
             }
 
         case .installing:
@@ -307,25 +306,16 @@ private struct CodexHooksPromptBanner: View {
                         .foregroundStyle(Color(nsColor: theme.error))
                         .multilineTextAlignment(.trailing)
                         .fixedSize(horizontal: false, vertical: true)
-                    Button("Open Settings", action: model.onOpenSettings)
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                    HStack(spacing: 8) {
+                        Button("Dismiss", action: model.onNotNow)
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        Button("Open Settings", action: model.onOpenSettings)
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                    }
                 }
-                closeButton
             }
         }
-    }
-
-    private var closeButton: some View {
-        Button(action: model.onNotNow) {
-            Image(systemName: "xmark")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Color(nsColor: theme.mutedForeground))
-                .frame(width: 18, height: 18)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help("Dismiss")
-        .accessibilityLabel("Dismiss")
     }
 }
