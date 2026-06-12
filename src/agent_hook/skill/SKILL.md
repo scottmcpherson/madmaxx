@@ -126,6 +126,17 @@ Rename a tab (the name shows in the tab bar and sidebar):
 ghostty-agent-hook rename-tab <tab-id> <new name>
 ```
 
+Use `current` as the tab id to rename the tab this session is running in —
+e.g. when the user says "rename this tab":
+
+```sh
+ghostty-agent-hook rename-tab current <new name>
+```
+
+(Your own terminal id is `$GHOSTTY_AGENT_SURFACE_ID`; match it against
+`list-tabs` terminal ids — case-insensitively — if you ever need to find
+your own tab or window explicitly.)
+
 Type a prompt or command into an existing tab's terminal and submit it:
 
 ```sh

@@ -65,11 +65,23 @@ const rename_script_template =
     \\on run argv
     \\  set tid to item 1 of argv
     \\  set newName to item 2 of argv
+    \\  set surfaceId to item 3 of argv
     \\  tell application id "%APP_ID%"
+    \\    if tid is "current" then
+    \\      repeat with w in windows
+    \\        repeat with t in tabs of w
+    \\          if exists (terminal id surfaceId of t) then
+    \\            set name of t to newName
+    \\            return id of t
+    \\          end if
+    \\        end repeat
+    \\      end repeat
+    \\      error "current tab not found"
+    \\    end if
     \\    repeat with w in windows
     \\      if exists (tab id tid of w) then
     \\        set name of (tab id tid of w) to newName
-    \\        return "ok"
+    \\        return tid
     \\      end if
     \\    end repeat
     \\  end tell
@@ -211,17 +223,19 @@ pub fn runCloseTab(alloc: Allocator, args: []const [:0]u8) !void {
 
 pub fn runRenameTab(alloc: Allocator, args: []const [:0]u8) !void {
     requireDarwin();
-    if (args.len < 2) osa.fail("usage: ghostty-agent-hook rename-tab <tab-id> <new name>", .{});
+    if (args.len < 2) {
+        osa.fail("usage: ghostty-agent-hook rename-tab <tab-id|current> <new name>", .{});
+    }
 
     var arena_state = std.heap.ArenaAllocator.init(alloc);
     defer arena_state.deinit();
     const arena = arena_state.allocator();
 
     const title = try joinArgs(arena, args[1..]);
-    _ = try osa.requireSurfaceId(arena);
+    const surface_id = try osa.requireSurfaceId(arena);
     const script = try osa.renderScript(arena, rename_script_template, try osa.appId(arena));
-    _ = try osa.runScript(arena, script, &.{ args[0], title });
-    try printOk(&.{ "tab_id", args[0], "title", title });
+    const tab_id = try osa.runScript(arena, script, &.{ args[0], title, surface_id });
+    try printOk(&.{ "tab_id", tab_id, "title", title });
 }
 
 pub fn runSend(alloc: Allocator, args: []const [:0]u8) !void {
