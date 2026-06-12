@@ -169,6 +169,8 @@ class AppDelegate: NSObject,
     // MARK: - NSApplicationDelegate
 
     func applicationWillFinishLaunching(_ notification: Notification) {
+        migrateLegacyDefaultsIfNeeded()
+
         #if DEBUG
         if
             let suite = UserDefaults.ghosttySuite,
@@ -192,6 +194,29 @@ class AppDelegate: NSObject,
             // Manual autofill via the `Edit => AutoFill` menu item still work as expected.
             "NSAutoFillHeuristicControllerEnabled": false,
         ])
+    }
+
+    /// Copies persisted user defaults from the bundle id this app shipped
+    /// under before the MadMaxx rename (com.scottmcpherson.mosttly-ghostty).
+    /// Runs once per defaults domain; values already set under the new bundle
+    /// id are never overwritten.
+    private func migrateLegacyDefaultsIfNeeded() {
+        guard let bundleID = Bundle.main.bundleIdentifier else { return }
+        let legacyDomain = bundleID.replacingOccurrences(
+            of: "com.scottmcpherson.madmaxx",
+            with: "com.scottmcpherson.mosttly-ghostty")
+        guard legacyDomain != bundleID else { return }
+
+        let migratedKey = "MadMaxxDidMigrateLegacyDefaults"
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: migratedKey) else { return }
+
+        var domain = defaults.persistentDomain(forName: bundleID) ?? [:]
+        if let legacy = defaults.persistentDomain(forName: legacyDomain) {
+            domain.merge(legacy) { current, _ in current }
+        }
+        domain[migratedKey] = true
+        defaults.setPersistentDomain(domain, forName: bundleID)
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {

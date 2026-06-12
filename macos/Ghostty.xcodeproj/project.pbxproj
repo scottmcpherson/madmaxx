@@ -784,7 +784,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 0.1;
 				"OTHER_LDFLAGS[arch=*]" = "-lstdc++";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.scottmcpherson.mosttly-ghostty";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.scottmcpherson.madmaxx";
 				PRODUCT_MODULE_NAME = Ghostty;
 				PRODUCT_NAME = "MadMaxx";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -879,7 +879,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.scottmcpherson.mosttly-ghostty-dock-tile";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.scottmcpherson.madmaxx-dock-tile";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -908,7 +908,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.scottmcpherson.mosttly-ghostty-dock-tile";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.scottmcpherson.madmaxx-dock-tile";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -937,7 +937,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.scottmcpherson.mosttly-ghostty-dock-tile";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.scottmcpherson.madmaxx-dock-tile";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -1183,7 +1183,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 0.1;
 				"OTHER_LDFLAGS[arch=*]" = "-lstdc++";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.scottmcpherson.mosttly-ghostty.debug";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.scottmcpherson.madmaxx.debug";
 				PRODUCT_MODULE_NAME = Ghostty;
 				PRODUCT_NAME = "MadMaxx";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1240,7 +1240,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 0.1;
 				"OTHER_LDFLAGS[arch=*]" = "-lstdc++";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.scottmcpherson.mosttly-ghostty";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.scottmcpherson.madmaxx";
 				PRODUCT_MODULE_NAME = Ghostty;
 				PRODUCT_NAME = "MadMaxx";
 				SWIFT_EMIT_LOC_STRINGS = YES;
