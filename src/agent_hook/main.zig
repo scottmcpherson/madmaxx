@@ -2,6 +2,7 @@ const std = @import("std");
 
 const new_tab = @import("new_tab.zig");
 const skills = @import("skills.zig");
+const tabs = @import("tabs.zig");
 
 const Allocator = std.mem.Allocator;
 const JsonArray = std.json.Array;
@@ -76,6 +77,26 @@ pub fn main() !void {
 
     if (args.len >= 2 and std.mem.eql(u8, args[1], "new-tab")) {
         try new_tab.run(alloc, args[2..]);
+        return;
+    }
+
+    if (args.len >= 2 and std.mem.eql(u8, args[1], "list-tabs")) {
+        try tabs.runListTabs(alloc, args[2..]);
+        return;
+    }
+
+    if (args.len >= 2 and std.mem.eql(u8, args[1], "close-tab")) {
+        try tabs.runCloseTab(alloc, args[2..]);
+        return;
+    }
+
+    if (args.len >= 2 and std.mem.eql(u8, args[1], "rename-tab")) {
+        try tabs.runRenameTab(alloc, args[2..]);
+        return;
+    }
+
+    if (args.len >= 2 and std.mem.eql(u8, args[1], "send")) {
+        try tabs.runSend(alloc, args[2..]);
         return;
     }
 
@@ -937,6 +958,8 @@ fn envOwned(alloc: Allocator, key: []const u8) !?[]const u8 {
 test {
     _ = new_tab;
     _ = skills;
+    _ = tabs;
+    _ = @import("osa.zig");
 }
 
 test "agent hook state normalization" {

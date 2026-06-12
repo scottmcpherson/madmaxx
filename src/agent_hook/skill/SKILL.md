@@ -1,6 +1,6 @@
 ---
 name: mosttly-tabs
-description: Open a new tab or window in the Mosttly terminal — by default starting a new Claude Code or Codex session in it, optionally with an initial prompt — or run any command there. Use when the user asks to open or create a new tab, terminal, session, thread, or window (e.g. "open a new tab", "create a tab and have it do …", "start another session/agent to do …").
+description: Open and manage tabs in the Mosttly terminal. New tabs default to starting a Claude Code or Codex session, optionally with an initial prompt; existing tabs can be listed (with agent status), renamed, prompted, and closed. Use when the user asks to open or create a new tab, terminal, session, thread, or window (e.g. "open a new tab", "create a tab and have it do …", "start another session/agent to do …"), or to inspect, rename, message, or close tabs/sessions, or to orchestrate work across multiple tabs.
 ---
 
 <!-- managed by ghostty-agent-hook; do not edit (reinstalled from Mosttly settings) -->
@@ -71,6 +71,62 @@ For redirects, pipes, or command chains, wrap the whole thing in a shell:
 ```sh
 ghostty-agent-hook new-tab --title "Build and log" -- zsh -c 'make 2>&1 | tee build.log'
 ```
+
+## Manage existing tabs
+
+List all windows, tabs, and terminals as JSON:
+
+```sh
+ghostty-agent-hook list-tabs
+```
+
+Each terminal includes its foreground `pid` and `process` (e.g. `claude`,
+`codex`, or a shell when the agent has exited), plus an `agent` object with
+the last reported activity state when an agent has run there: `running`,
+`needsInput`, `error`, or `idle`. Use this to check on sessions you spawned —
+`"process": "claude"` with `"state": "needsInput"` means that session is
+waiting for input.
+
+Rename a tab (the name shows in the tab bar and sidebar):
+
+```sh
+ghostty-agent-hook rename-tab <tab-id> <new name>
+```
+
+Type a prompt or command into an existing tab's terminal and submit it:
+
+```sh
+ghostty-agent-hook send <terminal-id> <text>
+```
+
+This pastes the text and presses Enter — use it to prompt an agent session
+running in another tab, or to run a command in another tab's shell. Pass
+`--no-enter` before the terminal id to type without submitting. Give the
+session a moment to act, then check on it with `list-tabs`.
+
+Menu and permission prompts inside a session respond to key presses, not
+pasted text. To answer them, press keys instead:
+
+```sh
+ghostty-agent-hook send --key enter <terminal-id>
+```
+
+`--key` presses a single named key (`enter`, `arrowUp`, `arrowDown`, `tab`,
+`escape`, digits like `digit1`/`digit2`, …) — e.g. `--key enter` confirms
+the highlighted option of a permission prompt.
+
+Close a tab:
+
+```sh
+ghostty-agent-hook close-tab <tab-id>
+```
+
+Closing is immediate and does not ask for confirmation — it kills whatever
+is running in the tab. Only close tabs you created, or tabs the user
+explicitly asked to close.
+
+`new-tab` prints the ids of the tab and terminal it created; keep them when
+you plan to manage the tab later, and use `list-tabs` to rediscover them.
 
 ## Notes
 

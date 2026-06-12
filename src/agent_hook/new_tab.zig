@@ -6,10 +6,9 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const Allocator = std.mem.Allocator;
+const osa = @import("osa.zig");
 
-/// Bundle id used when the inherited __CFBundleIdentifier is unavailable.
-const default_bundle_id = "com.scottmcpherson.mosttly-ghostty";
+const Allocator = std.mem.Allocator;
 
 const usage =
     \\Usage: ghostty-agent-hook new-tab [options] [--] [command [args...]]
@@ -110,7 +109,7 @@ pub const ParseResult = union(enum) {
 
 pub fn run(alloc: Allocator, args: []const [:0]u8) !void {
     if (comptime !builtin.target.os.tag.isDarwin()) {
-        return fail("new-tab is only supported on macOS", .{});
+        osa.fail("new-tab is only supported on macOS", .{});
     }
 
     var arena_state = std.heap.ArenaAllocator.init(alloc);
@@ -122,7 +121,7 @@ pub fn run(alloc: Allocator, args: []const [:0]u8) !void {
 
     const opts = switch (try parseOptions(arena, plain)) {
         .ok => |opts| opts,
-        .err => |message| return fail("{s}\n\n{s}", .{ message, usage }),
+        .err => |message| osa.fail("{s}\n\n{s}", .{ message, usage }),
     };
 
     if (opts.help) {
@@ -133,15 +132,7 @@ pub fn run(alloc: Allocator, args: []const [:0]u8) !void {
         return;
     }
 
-    const surface_id = try envOwned(arena, "GHOSTTY_AGENT_SURFACE_ID") orelse {
-        return fail(
-            "new-tab must be run inside a Mosttly terminal " ++
-                "(GHOSTTY_AGENT_SURFACE_ID is not set)",
-            .{},
-        );
-    };
-
-    const app_id = try envOwned(arena, "__CFBundleIdentifier") orelse default_bundle_id;
+    const surface_id = try osa.requireSurfaceId(arena);
     const cwd = opts.cwd orelse try std.process.getCwdAlloc(arena);
 
     var command_text: []const u8 = "";
@@ -155,19 +146,10 @@ pub fn run(alloc: Allocator, args: []const [:0]u8) !void {
         }
     }
 
-    const script = try std.mem.replaceOwned(
-        u8,
-        arena,
-        script_template,
-        "%APP_ID%",
-        try escapeAppleScriptString(arena, app_id),
-    );
+    const script = try osa.renderScript(arena, script_template, try osa.appId(arena));
 
-    var argv: std.ArrayListUnmanaged([]const u8) = .empty;
-    try argv.appendSlice(arena, &.{
-        "/usr/bin/osascript",
-        "-e",
-        script,
+    var script_args: std.ArrayListUnmanaged([]const u8) = .empty;
+    try script_args.appendSlice(arena, &.{
         surface_id,
         if (opts.new_window) "1" else "0",
         cwd,
@@ -176,28 +158,11 @@ pub fn run(alloc: Allocator, args: []const [:0]u8) !void {
         if (opts.wait) "1" else "0",
         opts.title orelse "",
     });
-    try argv.appendSlice(arena, opts.env);
+    try script_args.appendSlice(arena, opts.env);
 
-    const result = std.process.Child.run(.{
-        .allocator = arena,
-        .argv = argv.items,
-    }) catch |err| {
-        return fail("failed to run osascript: {}", .{err});
-    };
+    const stdout_raw = try osa.runScript(arena, script, script_args.items);
 
-    switch (result.term) {
-        .Exited => |code| if (code != 0) {
-            const message = std.mem.trim(u8, result.stderr, &std.ascii.whitespace);
-            return fail("failed to create tab: {s}", .{message});
-        },
-        else => return fail("osascript terminated abnormally", .{}),
-    }
-
-    var lines = std.mem.splitScalar(
-        u8,
-        std.mem.trim(u8, result.stdout, &std.ascii.whitespace),
-        '\n',
-    );
+    var lines = std.mem.splitScalar(u8, stdout_raw, '\n');
     const tab_id = std.mem.trim(u8, lines.next() orelse "", &std.ascii.whitespace);
     const terminal_id = std.mem.trim(u8, lines.next() orelse "", &std.ascii.whitespace);
     const window_id = std.mem.trim(u8, lines.next() orelse "", &std.ascii.whitespace);
@@ -336,35 +301,6 @@ fn isShellSafeWord(word: []const u8) bool {
     return true;
 }
 
-fn escapeAppleScriptString(alloc: Allocator, value: []const u8) Allocator.Error![]const u8 {
-    var out: std.ArrayListUnmanaged(u8) = .empty;
-    for (value) |c| {
-        switch (c) {
-            '\\', '"' => {
-                try out.append(alloc, '\\');
-                try out.append(alloc, c);
-            },
-            else => try out.append(alloc, c),
-        }
-    }
-    return try out.toOwnedSlice(alloc);
-}
-
-fn envOwned(alloc: Allocator, key: []const u8) !?[]const u8 {
-    return std.process.getEnvVarOwned(alloc, key) catch |err| switch (err) {
-        error.EnvironmentVariableNotFound => null,
-        else => return err,
-    };
-}
-
-fn fail(comptime fmt: []const u8, args: anytype) noreturn {
-    var buffer: [4096]u8 = undefined;
-    var stderr = std.fs.File.stderr().writer(&buffer);
-    stderr.interface.print("error: " ++ fmt ++ "\n", args) catch {};
-    stderr.interface.flush() catch {};
-    std.process.exit(1);
-}
-
 test "new-tab option parsing" {
     const testing = std.testing;
     var arena_state = std.heap.ArenaAllocator.init(testing.allocator);
@@ -449,20 +385,4 @@ test "shell join quotes arguments" {
         try shellJoin(arena, &.{ "claude", "--permission-mode", "auto", "/goal do xyz" }),
     );
     try testing.expectEqualStrings("''", try shellJoin(arena, &.{""}));
-}
-
-test "applescript string escaping" {
-    const testing = std.testing;
-    var arena_state = std.heap.ArenaAllocator.init(testing.allocator);
-    defer arena_state.deinit();
-    const arena = arena_state.allocator();
-
-    try testing.expectEqualStrings(
-        "com.example.app",
-        try escapeAppleScriptString(arena, "com.example.app"),
-    );
-    try testing.expectEqualStrings(
-        "a\\\"b\\\\c",
-        try escapeAppleScriptString(arena, "a\"b\\c"),
-    );
 }
