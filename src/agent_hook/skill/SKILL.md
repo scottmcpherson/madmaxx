@@ -58,8 +58,10 @@ Rules:
 
 - If the user names a mode (or says "same mode as this session" and you know
   how this session was launched), pass it through.
-- If the user didn't specify one, pass no permission flags — the new session
-  gets the agent's normal defaults.
+- If the user didn't specify one, pass no permission flags. Mosttly then
+  applies the "Agent tab permission mode" configured in its Settings
+  automatically; without that setting the new session gets the agent's
+  normal defaults. Explicit flags always win over the setting.
 - For unattended workers you will manage yourself, suggest a mode that won't
   stall on approval prompts (Claude Code `--permission-mode acceptEdits`,
   Codex `--full-auto`) — but never pass a bypass/danger mode the user didn't

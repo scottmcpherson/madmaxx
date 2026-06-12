@@ -135,10 +135,17 @@ pub fn run(alloc: Allocator, args: []const [:0]u8) !void {
     const surface_id = try osa.requireSurfaceId(arena);
     const cwd = opts.cwd orelse try std.process.getCwdAlloc(arena);
 
+    var command = opts.command;
+    if (try configuredPermissionMode(arena, command)) |mode| {
+        if (try injectPermissionMode(arena, command, mode)) |injected| {
+            command = injected;
+        }
+    }
+
     var command_text: []const u8 = "";
     var input_text: []const u8 = "";
-    if (opts.command.len > 0) {
-        const joined = try shellJoin(arena, opts.command);
+    if (command.len > 0) {
+        const joined = try shellJoin(arena, command);
         if (opts.exec) {
             command_text = joined;
         } else {
@@ -241,6 +248,108 @@ pub fn parseOptions(alloc: Allocator, args: []const []const u8) Allocator.Error!
 
     opts.env = try env.toOwnedSlice(alloc);
     return .{ .ok = opts };
+}
+
+/// UserDefaults keys written by the app's Settings window for the default
+/// permission mode of agent tabs. Sync with SettingsView.swift.
+const claude_mode_defaults_key = "agentTabClaudePermissionMode";
+const codex_mode_defaults_key = "agentTabCodexSandboxMode";
+
+/// Existing flags that mean the caller already chose a permission setup, in
+/// which case the configured default must not be injected.
+const claude_permission_flags = [_][]const u8{
+    "--permission-mode",
+    "--dangerously-skip-permissions",
+};
+const codex_permission_flags = [_][]const u8{
+    "--sandbox",
+    "-s",
+    "--ask-for-approval",
+    "-a",
+    "--full-auto",
+    "--dangerously-bypass-approvals-and-sandbox",
+    "--yolo",
+};
+
+/// Reads the configured default permission mode for the agent CLI being
+/// spawned, from the app's preferences domain. Returns null when the command
+/// is not a known agent CLI or no mode is configured.
+fn configuredPermissionMode(alloc: Allocator, command: []const []const u8) !?[]const u8 {
+    if (command.len == 0) return null;
+
+    const program = std.fs.path.basename(command[0]);
+    const key = if (std.mem.eql(u8, program, "claude"))
+        claude_mode_defaults_key
+    else if (std.mem.eql(u8, program, "codex"))
+        codex_mode_defaults_key
+    else
+        return null;
+
+    const domain = try osa.appId(alloc);
+    const result = std.process.Child.run(.{
+        .allocator = alloc,
+        .argv = &.{ "/usr/bin/defaults", "read", domain, key },
+    }) catch return null;
+    switch (result.term) {
+        .Exited => |code| if (code != 0) return null,
+        else => return null,
+    }
+
+    const mode = std.mem.trim(u8, result.stdout, &std.ascii.whitespace);
+    if (mode.len == 0 or std.mem.eql(u8, mode, "default")) return null;
+    return mode;
+}
+
+/// Returns the command with the flags for `mode` inserted after the program
+/// name, or null when the mode is unknown or the caller already passed
+/// explicit permission flags. Pure so it can be unit tested.
+pub fn injectPermissionMode(
+    alloc: Allocator,
+    command: []const []const u8,
+    mode: []const u8,
+) Allocator.Error!?[]const []const u8 {
+    if (command.len == 0) return null;
+    const program = std.fs.path.basename(command[0]);
+
+    const extra: []const []const u8 = extra: {
+        if (std.mem.eql(u8, program, "claude")) {
+            if (commandHasAnyFlag(command, &claude_permission_flags)) return null;
+            if (std.mem.eql(u8, mode, "plan")) break :extra &.{ "--permission-mode", "plan" };
+            if (std.mem.eql(u8, mode, "acceptEdits")) break :extra &.{ "--permission-mode", "acceptEdits" };
+            if (std.mem.eql(u8, mode, "bypassPermissions")) break :extra &.{ "--permission-mode", "bypassPermissions" };
+            return null;
+        }
+
+        if (std.mem.eql(u8, program, "codex")) {
+            if (commandHasAnyFlag(command, &codex_permission_flags)) return null;
+            if (std.mem.eql(u8, mode, "read-only")) break :extra &.{ "--sandbox", "read-only" };
+            if (std.mem.eql(u8, mode, "full-auto")) break :extra &.{"--full-auto"};
+            if (std.mem.eql(u8, mode, "danger-full-access")) {
+                break :extra &.{ "--sandbox", "danger-full-access", "--ask-for-approval", "never" };
+            }
+            return null;
+        }
+
+        return null;
+    };
+
+    var out = try alloc.alloc([]const u8, command.len + extra.len);
+    out[0] = command[0];
+    @memcpy(out[1 .. 1 + extra.len], extra);
+    @memcpy(out[1 + extra.len ..], command[1..]);
+    return out;
+}
+
+fn commandHasAnyFlag(command: []const []const u8, flags: []const []const u8) bool {
+    for (command[1..]) |arg| {
+        for (flags) |flag| {
+            if (std.mem.eql(u8, arg, flag)) return true;
+            if (arg.len > flag.len and
+                std.mem.startsWith(u8, arg, flag) and
+                arg[flag.len] == '=') return true;
+        }
+    }
+    return false;
 }
 
 fn matchesOption(arg: []const u8, comptime name: []const u8) bool {
@@ -364,6 +473,59 @@ test "new-tab option parsing errors" {
     try testing.expect((try parseOptions(arena, &.{"--title"})) == .err);
     try testing.expect((try parseOptions(arena, &.{ "--env", "NOEQUALS" })) == .err);
     try testing.expect((try parseOptions(arena, &.{ "--wait", "ls" })) == .err);
+}
+
+test "inject permission mode into agent commands" {
+    const testing = std.testing;
+    var arena_state = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    {
+        const injected = (try injectPermissionMode(arena, &.{ "claude", "do xyz" }, "acceptEdits")).?;
+        try testing.expectEqual(@as(usize, 4), injected.len);
+        try testing.expectEqualStrings("claude", injected[0]);
+        try testing.expectEqualStrings("--permission-mode", injected[1]);
+        try testing.expectEqualStrings("acceptEdits", injected[2]);
+        try testing.expectEqualStrings("do xyz", injected[3]);
+    }
+
+    {
+        // Program paths resolve by basename.
+        const injected = (try injectPermissionMode(arena, &.{"/usr/local/bin/codex"}, "full-auto")).?;
+        try testing.expectEqual(@as(usize, 2), injected.len);
+        try testing.expectEqualStrings("--full-auto", injected[1]);
+    }
+
+    {
+        const injected = (try injectPermissionMode(arena, &.{ "codex", "fix it" }, "danger-full-access")).?;
+        try testing.expectEqualStrings("--sandbox", injected[1]);
+        try testing.expectEqualStrings("danger-full-access", injected[2]);
+        try testing.expectEqualStrings("--ask-for-approval", injected[3]);
+        try testing.expectEqualStrings("never", injected[4]);
+    }
+
+    // Explicit flags from the caller win over the configured default.
+    try testing.expect((try injectPermissionMode(
+        arena,
+        &.{ "claude", "--permission-mode", "plan", "x" },
+        "acceptEdits",
+    )) == null);
+    try testing.expect((try injectPermissionMode(
+        arena,
+        &.{ "claude", "--permission-mode=plan" },
+        "acceptEdits",
+    )) == null);
+    try testing.expect((try injectPermissionMode(
+        arena,
+        &.{ "codex", "--full-auto" },
+        "danger-full-access",
+    )) == null);
+
+    // Unknown programs and modes are left alone.
+    try testing.expect((try injectPermissionMode(arena, &.{ "htop", "-d", "5" }, "acceptEdits")) == null);
+    try testing.expect((try injectPermissionMode(arena, &.{"claude"}, "bogus")) == null);
+    try testing.expect((try injectPermissionMode(arena, &.{}, "acceptEdits")) == null);
 }
 
 test "shell join quotes arguments" {

@@ -65,6 +65,16 @@ struct SettingsView: View {
             uninstall: model.uninstallClaudeSkill,
             helpText: "Lets Claude Code open new Mosttly tabs and run commands in them",
             accessibilityPrefix: "MosttlySettingsClaudeSkill")
+
+        Picker("Agent tab permission mode", selection: $model.claudeTabPermissionMode) {
+            Text("Default").tag("default")
+            Text("Plan").tag("plan")
+            Text("Accept Edits").tag("acceptEdits")
+            Text("Bypass Permissions").tag("bypassPermissions")
+        }
+        .help("Permission mode for Claude Code sessions that agents start in new tabs. "
+            + "Applied unless the spawning agent passes explicit permission flags.")
+        .accessibilityIdentifier("MosttlySettingsClaudeTabPermissionModePicker")
     }
 
     // MARK: - Codex
@@ -118,6 +128,16 @@ struct SettingsView: View {
             uninstall: model.uninstallCodexSkill,
             helpText: "Lets Codex open new Mosttly tabs and run commands in them",
             accessibilityPrefix: "MosttlySettingsCodexSkill")
+
+        Picker("Agent tab sandbox mode", selection: $model.codexTabSandboxMode) {
+            Text("Default").tag("default")
+            Text("Read Only").tag("read-only")
+            Text("Full Auto").tag("full-auto")
+            Text("Danger Full Access").tag("danger-full-access")
+        }
+        .help("Sandbox mode for Codex sessions that agents start in new tabs. "
+            + "Applied unless the spawning agent passes explicit sandbox flags.")
+        .accessibilityIdentifier("MosttlySettingsCodexTabSandboxModePicker")
     }
 
     // MARK: - Helpers
@@ -176,10 +196,41 @@ struct SettingsView: View {
 }
 
 final class SettingsViewModel: ObservableObject {
+    /// UserDefaults keys for the default permission mode of agent-spawned
+    /// tabs. Sync with `src/agent_hook/new_tab.zig`, which reads them when
+    /// spawning claude/codex without explicit permission flags.
+    static let claudeTabPermissionModeKey = "agentTabClaudePermissionMode"
+    static let codexTabSandboxModeKey = "agentTabCodexSandboxMode"
+
     @Published private(set) var claudeConfigured = false
     @Published private(set) var claudeSkillStatus: AgentInstallStatus = .notInstalled
     @Published private(set) var codexStatus: AgentInstallStatus = .notInstalled
     @Published private(set) var codexSkillStatus: AgentInstallStatus = .notInstalled
+
+    @Published var claudeTabPermissionMode: String {
+        didSet { Self.persistMode(claudeTabPermissionMode, forKey: Self.claudeTabPermissionModeKey) }
+    }
+
+    @Published var codexTabSandboxMode: String {
+        didSet { Self.persistMode(codexTabSandboxMode, forKey: Self.codexTabSandboxModeKey) }
+    }
+
+    init() {
+        self.claudeTabPermissionMode =
+            UserDefaults.standard.string(forKey: Self.claudeTabPermissionModeKey) ?? "default"
+        self.codexTabSandboxMode =
+            UserDefaults.standard.string(forKey: Self.codexTabSandboxModeKey) ?? "default"
+    }
+
+    /// "default" means "no opinion", which we persist as an absent key so the
+    /// helper can skip the lookup cleanly.
+    private static func persistMode(_ mode: String, forKey key: String) {
+        if mode == "default" {
+            UserDefaults.standard.removeObject(forKey: key)
+        } else {
+            UserDefaults.standard.set(mode, forKey: key)
+        }
+    }
 
     func refresh() {
         claudeConfigured = CodexHooksManager.claudeConfigured()
