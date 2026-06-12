@@ -35,6 +35,37 @@ Add any CLI flags the user asks for (model, permission mode, etc.) before
 the prompt. Use `codex` instead when running as Codex or when the user asks
 for it.
 
+### Permission mode of the new session
+
+Everything after `--` is passed to the agent CLI verbatim, so set the new
+session's autonomy with that CLI's own flags:
+
+- Claude Code: `--permission-mode default|plan|acceptEdits|bypassPermissions`
+
+  ```sh
+  ghostty-agent-hook new-tab --title "Fix auth bug" -- claude --permission-mode acceptEdits "<prompt>"
+  ```
+
+- Codex: `--sandbox read-only|workspace-write|danger-full-access` and
+  `--ask-for-approval untrusted|on-failure|on-request|never`, or the
+  `--full-auto` shorthand
+
+  ```sh
+  ghostty-agent-hook new-tab --title "Add CSV export" -- codex --full-auto "<prompt>"
+  ```
+
+Rules:
+
+- If the user names a mode (or says "same mode as this session" and you know
+  how this session was launched), pass it through.
+- If the user didn't specify one, pass no permission flags — the new session
+  gets the agent's normal defaults.
+- For unattended workers you will manage yourself, suggest a mode that won't
+  stall on approval prompts (Claude Code `--permission-mode acceptEdits`,
+  Codex `--full-auto`) — but never pass a bypass/danger mode the user didn't
+  explicitly ask for. A stalled worker is recoverable anyway: `list-tabs`
+  shows `needsInput` and `send --key enter` answers its prompt.
+
 Run something other than an agent session only when the user explicitly
 names it (a plain shell tab, `htop`, a build, a server, …):
 
