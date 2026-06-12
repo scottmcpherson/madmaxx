@@ -316,6 +316,8 @@ pub fn injectPermissionMode(
             if (commandHasAnyFlag(command, &claude_permission_flags)) return null;
             if (std.mem.eql(u8, mode, "plan")) break :extra &.{ "--permission-mode", "plan" };
             if (std.mem.eql(u8, mode, "acceptEdits")) break :extra &.{ "--permission-mode", "acceptEdits" };
+            if (std.mem.eql(u8, mode, "auto")) break :extra &.{ "--permission-mode", "auto" };
+            if (std.mem.eql(u8, mode, "dontAsk")) break :extra &.{ "--permission-mode", "dontAsk" };
             if (std.mem.eql(u8, mode, "bypassPermissions")) break :extra &.{ "--permission-mode", "bypassPermissions" };
             return null;
         }
@@ -323,6 +325,7 @@ pub fn injectPermissionMode(
         if (std.mem.eql(u8, program, "codex")) {
             if (commandHasAnyFlag(command, &codex_permission_flags)) return null;
             if (std.mem.eql(u8, mode, "read-only")) break :extra &.{ "--sandbox", "read-only" };
+            if (std.mem.eql(u8, mode, "workspace-write")) break :extra &.{ "--sandbox", "workspace-write" };
             if (std.mem.eql(u8, mode, "full-auto")) break :extra &.{"--full-auto"};
             if (std.mem.eql(u8, mode, "danger-full-access")) {
                 break :extra &.{ "--sandbox", "danger-full-access", "--ask-for-approval", "never" };
@@ -495,6 +498,22 @@ test "inject permission mode into agent commands" {
         const injected = (try injectPermissionMode(arena, &.{"/usr/local/bin/codex"}, "full-auto")).?;
         try testing.expectEqual(@as(usize, 2), injected.len);
         try testing.expectEqualStrings("--full-auto", injected[1]);
+    }
+
+    {
+        const injected = (try injectPermissionMode(arena, &.{"claude"}, "auto")).?;
+        try testing.expectEqualStrings("auto", injected[2]);
+    }
+
+    {
+        const injected = (try injectPermissionMode(arena, &.{"claude"}, "dontAsk")).?;
+        try testing.expectEqualStrings("dontAsk", injected[2]);
+    }
+
+    {
+        const injected = (try injectPermissionMode(arena, &.{"codex"}, "workspace-write")).?;
+        try testing.expectEqualStrings("--sandbox", injected[1]);
+        try testing.expectEqualStrings("workspace-write", injected[2]);
     }
 
     {

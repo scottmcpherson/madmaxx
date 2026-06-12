@@ -40,15 +40,15 @@ for it.
 Everything after `--` is passed to the agent CLI verbatim, so set the new
 session's autonomy with that CLI's own flags:
 
-- Claude Code: `--permission-mode default|plan|acceptEdits|bypassPermissions`
+- Claude Code: `--permission-mode default|plan|acceptEdits|auto|dontAsk|bypassPermissions`
 
   ```sh
   ghostty-agent-hook new-tab --title "Fix auth bug" -- claude --permission-mode acceptEdits "<prompt>"
   ```
 
-- Codex: `--sandbox read-only|workspace-write|danger-full-access` and
-  `--ask-for-approval untrusted|on-failure|on-request|never`, or the
-  `--full-auto` shorthand
+- Codex: `--sandbox read-only|workspace-write|danger-full-access`,
+  `--ask-for-approval untrusted|on-failure|on-request|never`, and the
+  `--full-auto` shorthand (workspace-write + approval on failure)
 
   ```sh
   ghostty-agent-hook new-tab --title "Add CSV export" -- codex --full-auto "<prompt>"

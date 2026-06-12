@@ -70,6 +70,8 @@ struct SettingsView: View {
             Text("Default").tag("default")
             Text("Plan").tag("plan")
             Text("Accept Edits").tag("acceptEdits")
+            Text("Auto").tag("auto")
+            Text("Don't Ask").tag("dontAsk")
             Text("Bypass Permissions").tag("bypassPermissions")
         }
         .help("Permission mode for Claude Code sessions that agents start in new tabs. "
@@ -132,6 +134,7 @@ struct SettingsView: View {
         Picker("Agent tab sandbox mode", selection: $model.codexTabSandboxMode) {
             Text("Default").tag("default")
             Text("Read Only").tag("read-only")
+            Text("Workspace Write").tag("workspace-write")
             Text("Full Auto").tag("full-auto")
             Text("Danger Full Access").tag("danger-full-access")
         }
