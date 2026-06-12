@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to create, for example mosttly-v0.1.0"
+        description: "Release tag to create, for example madmaxx-v0.1.0"
         required: true
       prerelease:
         description: "Mark the GitHub release as a prerelease"
@@ -17,7 +17,7 @@ on:
         type: boolean
   push:
     tags:
-      - "mosttly-v*"
+      - "madmaxx-v*"
 
 permissions:
   contents: write
@@ -59,12 +59,12 @@ jobs:
             REPLACE_EXISTING="${{ inputs.replace_existing }}"
           fi
 
-          if [[ ! "$TAG" =~ ^mosttly-v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Release tags must look like mosttly-v0.1.0 or mosttly-v0.1.0-beta.1" >&2
+          if [[ ! "$TAG" =~ ^madmaxx-v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Release tags must look like madmaxx-v0.1.0 or madmaxx-v0.1.0-beta.1" >&2
             exit 1
           fi
 
-          VERSION="${TAG#mosttly-v}"
+          VERSION="${TAG#madmaxx-v}"
           BUILD="$(git rev-list --count HEAD)"
           COMMIT="$(git rev-parse --short HEAD)"
 
@@ -275,7 +275,7 @@ jobs:
 
           printf '%s' "$MOSTTLY_SPARKLE_PRIVATE_KEY" > signing.key
           sign_update -f signing.key MadMaxx.dmg > sign_update.txt
-          MOSTTLY_COMMIT_LONG="$(git rev-parse HEAD)" python3 ./dist/macos/update_appcast_mosttly.py
+          MOSTTLY_COMMIT_LONG="$(git rev-parse HEAD)" python3 ./dist/macos/update_appcast_madmaxx.py
           rm signing.key sign_update.txt
 
       - name: Create or update GitHub release

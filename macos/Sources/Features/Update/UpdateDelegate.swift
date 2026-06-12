@@ -6,7 +6,7 @@ extension UpdateDriver: SPUUpdaterDelegate {
         // MadMaxx currently publishes stable macOS updates through GitHub
         // Releases. GitHub's "latest" endpoint intentionally ignores
         // prereleases, which keeps this feed stable-only.
-        return "https://github.com/scottmcpherson/mosttly-ghostty/releases/latest/download/appcast.xml"
+        return "https://github.com/scottmcpherson/madmaxx/releases/latest/download/appcast.xml"
     }
 
     /// Called when an update is scheduled to install silently,

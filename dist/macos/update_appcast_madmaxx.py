@@ -7,7 +7,7 @@ Expected files in the current directory:
 Expected environment variables:
     - MOSTTLY_VERSION: CFBundleShortVersionString, for example 0.1.0
     - MOSTTLY_BUILD: CFBundleVersion, monotonically increasing build number
-    - MOSTTLY_RELEASE_TAG: GitHub release tag, for example mosttly-v0.1.0
+    - MOSTTLY_RELEASE_TAG: GitHub release tag, for example madmaxx-v0.1.0
     - MOSTTLY_COMMIT: short commit hash
     - MOSTTLY_COMMIT_LONG: full commit hash
 
@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
 SPARKLE_NS = "http://www.andymatuschak.org/xml-namespaces/sparkle"
-REPO = "https://github.com/scottmcpherson/mosttly-ghostty"
+REPO = "https://github.com/scottmcpherson/madmaxx"
 
 
 def sparkle(name):

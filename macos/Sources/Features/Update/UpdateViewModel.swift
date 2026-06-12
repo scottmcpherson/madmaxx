@@ -292,8 +292,8 @@ enum UpdateState: Equatable {
 
             // Check for semantic version (x.y.z)
             if let semver = Self.extractSemanticVersion(from: version) {
-                let releaseURL = "https://github.com/scottmcpherson/mosttly-ghostty/releases/tag/" +
-                    "mosttly-v\(semver)"
+                let releaseURL = "https://github.com/scottmcpherson/madmaxx/releases/tag/" +
+                    "madmaxx-v\(semver)"
                 if let url = URL(string: releaseURL) {
                     self = .tagged(url)
                     return
@@ -307,11 +307,11 @@ enum UpdateState: Equatable {
 
             if let currentHash = currentCommit, !currentHash.isEmpty,
                let url = URL(
-                   string: "https://github.com/scottmcpherson/mosttly-ghostty/compare/\(currentHash)...\(newHash)"
+                   string: "https://github.com/scottmcpherson/madmaxx/compare/\(currentHash)...\(newHash)"
                ) {
                 self = .compareTip(url)
             } else if let url = URL(
-                string: "https://github.com/scottmcpherson/mosttly-ghostty/commit/\(newHash)"
+                string: "https://github.com/scottmcpherson/madmaxx/commit/\(newHash)"
             ) {
                 self = .commit(url)
             } else {

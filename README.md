@@ -34,10 +34,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/scottmcpherson/mosttly-ghostty/releases/latest/download/MadMaxx.dmg">
+  <a href="https://github.com/scottmcpherson/madmaxx/releases/latest/download/MadMaxx.dmg">
     <img alt="Download macOS DMG" src="https://img.shields.io/badge/Download-macOS%20DMG-111111?style=for-the-badge&logo=apple&logoColor=white">
   </a>
-  <a href="https://github.com/scottmcpherson/mosttly-ghostty/releases">
+  <a href="https://github.com/scottmcpherson/madmaxx/releases">
     <img alt="View releases" src="https://img.shields.io/badge/View-Releases-346beb?style=for-the-badge&logo=github&logoColor=white">
   </a>
 </p>
@@ -62,7 +62,7 @@ layer for people running multiple coding agents in parallel.
 - Sidebar-first tab and session organization.
 - Sidebar agent status indicators for supported CLIs.
 - A macOS-first distribution path for the fork.
-- Fork-specific release artifacts published from `mosttly-v*` tags.
+- Fork-specific release artifacts published from `madmaxx-v*` tags.
 
 ## Project Scope
 
@@ -102,11 +102,11 @@ When in doubt, prefer terminal-native, lightweight, and upstream-friendly.
 
 MadMaxx currently publishes macOS builds through GitHub Releases:
 
-- [Download the latest macOS DMG](https://github.com/scottmcpherson/mosttly-ghostty/releases/latest/download/MadMaxx.dmg)
-- [Download the latest macOS zip](https://github.com/scottmcpherson/mosttly-ghostty/releases/latest/download/MadMaxx-macOS-universal.zip)
-- [View all releases](https://github.com/scottmcpherson/mosttly-ghostty/releases)
+- [Download the latest macOS DMG](https://github.com/scottmcpherson/madmaxx/releases/latest/download/MadMaxx.dmg)
+- [Download the latest macOS zip](https://github.com/scottmcpherson/madmaxx/releases/latest/download/MadMaxx-macOS-universal.zip)
+- [View all releases](https://github.com/scottmcpherson/madmaxx/releases)
 
-These builds are produced from `mosttly-v*` release tags and are signed + notarized.
+These builds are produced from `madmaxx-v*` release tags and are signed + notarized.
 
 ## Platform and Agent Status
 
