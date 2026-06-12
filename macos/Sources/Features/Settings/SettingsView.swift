@@ -137,6 +137,7 @@ struct SettingsView: View {
             Text("Workspace Write").tag("workspace-write")
             Text("Full Auto").tag("full-auto")
             Text("Danger Full Access").tag("danger-full-access")
+            Text("Bypass Approvals and Sandbox").tag("bypass")
         }
         .help("Sandbox mode for Codex sessions that agents start in new tabs. "
             + "Applied unless the spawning agent passes explicit sandbox flags.")

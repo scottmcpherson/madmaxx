@@ -328,7 +328,10 @@ pub fn injectPermissionMode(
             if (std.mem.eql(u8, mode, "workspace-write")) break :extra &.{ "--sandbox", "workspace-write" };
             if (std.mem.eql(u8, mode, "full-auto")) break :extra &.{"--full-auto"};
             if (std.mem.eql(u8, mode, "danger-full-access")) {
-                break :extra &.{ "--sandbox", "danger-full-access", "--ask-for-approval", "never" };
+                break :extra &.{ "--sandbox", "danger-full-access" };
+            }
+            if (std.mem.eql(u8, mode, "bypass")) {
+                break :extra &.{"--dangerously-bypass-approvals-and-sandbox"};
             }
             return null;
         }
@@ -518,10 +521,15 @@ test "inject permission mode into agent commands" {
 
     {
         const injected = (try injectPermissionMode(arena, &.{ "codex", "fix it" }, "danger-full-access")).?;
+        try testing.expectEqual(@as(usize, 4), injected.len);
         try testing.expectEqualStrings("--sandbox", injected[1]);
         try testing.expectEqualStrings("danger-full-access", injected[2]);
-        try testing.expectEqualStrings("--ask-for-approval", injected[3]);
-        try testing.expectEqualStrings("never", injected[4]);
+    }
+
+    {
+        const injected = (try injectPermissionMode(arena, &.{"codex"}, "bypass")).?;
+        try testing.expectEqual(@as(usize, 2), injected.len);
+        try testing.expectEqualStrings("--dangerously-bypass-approvals-and-sandbox", injected[1]);
     }
 
     // Explicit flags from the caller win over the configured default.

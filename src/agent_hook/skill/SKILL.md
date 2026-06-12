@@ -47,8 +47,10 @@ session's autonomy with that CLI's own flags:
   ```
 
 - Codex: `--sandbox read-only|workspace-write|danger-full-access`,
-  `--ask-for-approval untrusted|on-failure|on-request|never`, and the
-  `--full-auto` shorthand (workspace-write + approval on failure)
+  `--ask-for-approval untrusted|on-failure|on-request|never`, the
+  `--full-auto` shorthand (workspace-write + approval on failure), and
+  `--dangerously-bypass-approvals-and-sandbox` (no sandbox, no approvals —
+  only when the user explicitly asks for it)
 
   ```sh
   ghostty-agent-hook new-tab --title "Add CSV export" -- codex --full-auto "<prompt>"
