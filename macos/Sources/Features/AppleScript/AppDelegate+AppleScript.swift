@@ -177,7 +177,7 @@ extension NSApplication {
 
         guard let appDelegate = delegate as? AppDelegate else {
             command.scriptErrorNumber = errAEEventFailed
-            command.scriptErrorString = "MadMaxx app delegate is unavailable."
+            command.scriptErrorString = "Maxx app delegate is unavailable."
             return nil
         }
 
@@ -235,7 +235,7 @@ extension NSApplication {
 
         guard let appDelegate = delegate as? AppDelegate else {
             command.scriptErrorNumber = errAEEventFailed
-            command.scriptErrorString = "MadMaxx app delegate is unavailable."
+            command.scriptErrorString = "Maxx app delegate is unavailable."
             return nil
         }
 

@@ -1,14 +1,14 @@
 ---
-name: madmaxx-tabs
-description: Open and manage tabs in the MadMaxx terminal. New tabs default to starting a Claude Code or Codex session, optionally with an initial prompt; existing tabs can be listed (with agent status), renamed, prompted, and closed. Use when the user asks to open or create a new tab, terminal, session, thread, or window (e.g. "open a new tab", "create a tab and have it do …", "start another session/agent to do …"), or to inspect, rename, message, or close tabs/sessions, or to orchestrate work across multiple tabs.
+name: maxx-tabs
+description: Open and manage tabs in the Maxx terminal. New tabs default to starting a Claude Code or Codex session, optionally with an initial prompt; existing tabs can be listed (with agent status), renamed, prompted, and closed. Use when the user asks to open or create a new tab, terminal, session, thread, or window (e.g. "open a new tab", "create a tab and have it do …", "start another session/agent to do …"), or to inspect, rename, message, or close tabs/sessions, or to orchestrate work across multiple tabs.
 ---
 
-<!-- managed by madmaxx-agent-hook; do not edit (reinstalled from MadMaxx settings) -->
+<!-- managed by maxx-agent-hook; do not edit (reinstalled from Maxx settings) -->
 
-# MadMaxx terminal tabs
+# Maxx terminal tabs
 
-This session is running inside the MadMaxx terminal. The `madmaxx-agent-hook`
-CLI (already on PATH in MadMaxx terminals) can open new tabs in the running
+This session is running inside the Maxx terminal. The `maxx-agent-hook`
+CLI (already on PATH in Maxx terminals) can open new tabs in the running
 app and run commands in them.
 
 ## What to run in the new tab
@@ -21,14 +21,14 @@ means a tab running `codex`.
 New session with nothing specific to do:
 
 ```sh
-madmaxx-agent-hook new-tab --title "Claude session" -- claude
+maxx-agent-hook new-tab --title "Claude session" -- claude
 ```
 
 New session for a task ("create a tab and have it do …") — pass the task as
 the initial prompt, quoted as a single argument:
 
 ```sh
-madmaxx-agent-hook new-tab --title "Fix auth bug" -- claude "<prompt>"
+maxx-agent-hook new-tab --title "Fix auth bug" -- claude "<prompt>"
 ```
 
 Add any CLI flags the user asks for (model, permission mode, etc.) before
@@ -43,7 +43,7 @@ session's autonomy with that CLI's own flags:
 - Claude Code: `--permission-mode default|plan|acceptEdits|auto|dontAsk|bypassPermissions`
 
   ```sh
-  madmaxx-agent-hook new-tab --title "Fix auth bug" -- claude --permission-mode acceptEdits "<prompt>"
+  maxx-agent-hook new-tab --title "Fix auth bug" -- claude --permission-mode acceptEdits "<prompt>"
   ```
 
 - Codex: `--sandbox read-only|workspace-write|danger-full-access`,
@@ -53,14 +53,14 @@ session's autonomy with that CLI's own flags:
   only when the user explicitly asks for it)
 
   ```sh
-  madmaxx-agent-hook new-tab --title "Add CSV export" -- codex --full-auto "<prompt>"
+  maxx-agent-hook new-tab --title "Add CSV export" -- codex --full-auto "<prompt>"
   ```
 
 Rules:
 
 - If the user names a mode (or says "same mode as this session" and you know
   how this session was launched), pass it through.
-- If the user didn't specify one, pass no permission flags. MadMaxx then
+- If the user didn't specify one, pass no permission flags. Maxx then
   applies the "Agent tab permission mode" configured in its Settings
   automatically; without that setting the new session gets the agent's
   normal defaults. Explicit flags always win over the setting.
@@ -74,7 +74,7 @@ Run something other than an agent session only when the user explicitly
 names it (a plain shell tab, `htop`, a build, a server, …):
 
 ```sh
-madmaxx-agent-hook new-tab --title "API server" -- npm run dev
+maxx-agent-hook new-tab --title "API server" -- npm run dev
 ```
 
 ## How it works
@@ -104,7 +104,7 @@ interpretation — a bare `>`, `|`, or `&&` is quoted and loses its meaning.
 For redirects, pipes, or command chains, wrap the whole thing in a shell:
 
 ```sh
-madmaxx-agent-hook new-tab --title "Build and log" -- zsh -c 'make 2>&1 | tee build.log'
+maxx-agent-hook new-tab --title "Build and log" -- zsh -c 'make 2>&1 | tee build.log'
 ```
 
 ## Manage existing tabs
@@ -112,7 +112,7 @@ madmaxx-agent-hook new-tab --title "Build and log" -- zsh -c 'make 2>&1 | tee bu
 List all windows, tabs, and terminals as JSON:
 
 ```sh
-madmaxx-agent-hook list-tabs
+maxx-agent-hook list-tabs
 ```
 
 Each terminal includes its foreground `pid` and `process` (e.g. `claude`,
@@ -125,14 +125,14 @@ waiting for input.
 Rename a tab (the name shows in the tab bar and sidebar):
 
 ```sh
-madmaxx-agent-hook rename-tab <tab-id> <new name>
+maxx-agent-hook rename-tab <tab-id> <new name>
 ```
 
 Use `current` as the tab id to rename the tab this session is running in —
 e.g. when the user says "rename this tab":
 
 ```sh
-madmaxx-agent-hook rename-tab current <new name>
+maxx-agent-hook rename-tab current <new name>
 ```
 
 (Your own terminal id is `$GHOSTTY_AGENT_SURFACE_ID`; match it against
@@ -142,7 +142,7 @@ your own tab or window explicitly.)
 Type a prompt or command into an existing tab's terminal and submit it:
 
 ```sh
-madmaxx-agent-hook send <terminal-id> <text>
+maxx-agent-hook send <terminal-id> <text>
 ```
 
 This pastes the text and presses Enter — use it to prompt an agent session
@@ -154,7 +154,7 @@ Menu and permission prompts inside a session respond to key presses, not
 pasted text. To answer them, press keys instead:
 
 ```sh
-madmaxx-agent-hook send --key enter <terminal-id>
+maxx-agent-hook send --key enter <terminal-id>
 ```
 
 `--key` presses a single named key (`enter`, `arrowUp`, `arrowDown`, `tab`,
@@ -164,7 +164,7 @@ the highlighted option of a permission prompt.
 Close a tab:
 
 ```sh
-madmaxx-agent-hook close-tab <tab-id>
+maxx-agent-hook close-tab <tab-id>
 ```
 
 Closing is immediate and does not ask for confirmation — it kills whatever
@@ -176,8 +176,8 @@ you plan to manage the tab later, and use `list-tabs` to rediscover them.
 
 ## Notes
 
-- Only works inside MadMaxx terminals: it requires `GHOSTTY_AGENT_SURFACE_ID`
+- Only works inside Maxx terminals: it requires `GHOSTTY_AGENT_SURFACE_ID`
   in the environment. If that variable is missing, tell the user this only
-  works from a MadMaxx tab.
+  works from a Maxx tab.
 - Don't use this for quick shell commands you could run yourself; use it when
   the user wants a separate, visible tab or session.

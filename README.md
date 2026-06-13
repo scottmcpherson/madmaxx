@@ -1,14 +1,12 @@
 <!-- LOGO -->
 <h1 align="center">
-  <img src="images/icons/icon_1024.png" alt="MadMaxx logo" width="128">
+  <img src="images/icons/icon_1024.png" alt="Maxx logo" width="128">
   <br>
-  MadMaxx
+  Maxx
 </h1>
 
 <p align="center">
-  An unofficial Ghostty fork focused on sidebar-first sessions and parallel coding agents.
-  <br>
-  Built for agent-driven engineering workflows on macOS.
+  Agentic Maxxing Terminal
 </p>
 
 <p align="center">
@@ -27,24 +25,24 @@
 
 <p align="center">
   <img
-    src="images/mosttly-agent-sessions.png"
-    alt="MadMaxx preview showing sidebar sessions running multiple coding agents"
+    src="images/maxx-agent-sessions.png"
+    alt="Maxx preview showing sidebar sessions running multiple coding agents"
     width="920"
   >
 </p>
 
 <p align="center">
-  <a href="https://github.com/scottmcpherson/madmaxx/releases/latest/download/MadMaxx.dmg">
+  <a href="https://github.com/scottmcpherson/maxx/releases/latest/download/Maxx.dmg">
     <img alt="Download macOS DMG" src="https://img.shields.io/badge/Download-macOS%20DMG-111111?style=for-the-badge&logo=apple&logoColor=white">
   </a>
-  <a href="https://github.com/scottmcpherson/madmaxx/releases">
+  <a href="https://github.com/scottmcpherson/maxx/releases">
     <img alt="View releases" src="https://img.shields.io/badge/View-Releases-346beb?style=for-the-badge&logo=github&logoColor=white">
   </a>
 </p>
 
 ## Fork Notice
 
-MadMaxx is an unofficial fork of
+Maxx is an unofficial fork of
 [Ghostty](https://github.com/ghostty-org/ghostty). It is not affiliated with,
 endorsed by, or maintained by the Ghostty project.
 
@@ -56,17 +54,17 @@ behavior have changed.
 
 ## What's Different
 
-MadMaxx keeps Ghostty's fast native terminal core and adds a workflow
+Maxx keeps Ghostty's fast native terminal core and adds a workflow
 layer for people running multiple coding agents in parallel.
 
 - Sidebar-first tab and session organization.
 - Sidebar agent status indicators for supported CLIs.
 - A macOS-first distribution path for the fork.
-- Fork-specific release artifacts published from `madmaxx-v*` tags.
+- Fork-specific release artifacts published from `maxx-v*` tags.
 
 ## Project Scope
 
-MadMaxx's north star is to stay a lightweight, high-performance Ghostty
+Maxx's north star is to stay a lightweight, high-performance Ghostty
 terminal for running multiple coding agents in parallel.
 
 In practice, this fork should remain close to "Ghostty with a sidebar and agent
@@ -100,13 +98,13 @@ When in doubt, prefer terminal-native, lightweight, and upstream-friendly.
 
 ## Download
 
-MadMaxx currently publishes macOS builds through GitHub Releases:
+Maxx currently publishes macOS builds through GitHub Releases:
 
-- [Download the latest macOS DMG](https://github.com/scottmcpherson/madmaxx/releases/latest/download/MadMaxx.dmg)
-- [Download the latest macOS zip](https://github.com/scottmcpherson/madmaxx/releases/latest/download/MadMaxx-macOS-universal.zip)
-- [View all releases](https://github.com/scottmcpherson/madmaxx/releases)
+- [Download the latest macOS DMG](https://github.com/scottmcpherson/maxx/releases/latest/download/Maxx.dmg)
+- [Download the latest macOS zip](https://github.com/scottmcpherson/maxx/releases/latest/download/Maxx-macOS-universal.zip)
+- [View all releases](https://github.com/scottmcpherson/maxx/releases)
 
-These builds are produced from `madmaxx-v*` release tags and are signed + notarized.
+These builds are produced from `maxx-v*` release tags and are signed + notarized.
 
 ## Platform and Agent Status
 
@@ -138,7 +136,7 @@ upstream.
 
 ## Building from Source
 
-MadMaxx follows the upstream Ghostty build system:
+Maxx follows the upstream Ghostty build system:
 
 ```shell
 zig build
@@ -168,7 +166,7 @@ See [HACKING.md](HACKING.md) for upstream development details and
 
 ## Contributing
 
-For changes specific to MadMaxx, open issues or pull requests against
+For changes specific to Maxx, open issues or pull requests against
 this fork. For behavior that also affects upstream Ghostty, check the upstream
 [Contributing to Ghostty](CONTRIBUTING.md) guidance and consider whether the
 change belongs upstream first.
@@ -176,7 +174,7 @@ change belongs upstream first.
 ## Upstream Ghostty
 
 Ghostty is a fast, feature-rich, native terminal emulator and embeddable
-`libghostty` library. MadMaxx builds on that foundation and keeps
+`libghostty` library. Maxx builds on that foundation and keeps
 upstream licensing and attribution intact.
 
 For broader Ghostty project status, roadmap, terminal compliance details,
