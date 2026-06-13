@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maxx — Agentic Maxxing Terminal</title>
+<meta name="description" content="Maxx is a fast, native terminal for running multiple coding agents in parallel — a terminal that Claude Code and Codex can actually understand. An unofficial fork of Ghostty.">
+<meta name="theme-color" content="#07090d">
+
+<!-- Open Graph / social -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Maxx — Agentic Maxxing Terminal">
+<meta property="og:description" content="A fast, native terminal built for running multiple coding agents in parallel. Agent tab control, sidebar sessions, and live agent status. An unofficial fork of Ghostty.">
+<meta property="og:url" content="https://scottmcpherson.github.io/maxx/">
+<meta property="og:image" content="https://scottmcpherson.github.io/maxx/assets/maxx-preview.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Maxx — Agentic Maxxing Terminal">
+<meta name="twitter:description" content="A fast, native terminal built for running multiple coding agents in parallel. An unofficial fork of Ghostty.">
+<meta name="twitter:image" content="https://scottmcpherson.github.io/maxx/assets/maxx-preview.png">
+
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="256x256" href="assets/favicon-256.png">
+<link rel="apple-touch-icon" href="assets/favicon-256.png">
+
+<style>
+  :root {
+    --bg: #07090d;
+    --bg-2: #0a0e14;
+    --surface: #0e131b;
+    --surface-2: #121826;
+    --border: #1c2533;
+    --border-bright: #29384d;
+    --text: #e8eef6;
+    --text-muted: #93a1b5;
+    --text-faint: #6b7888;
+    --cyan: #38d6ff;
+    --blue: #2b7fff;
+    --accent-grad: linear-gradient(135deg, #5ee0ff 0%, #2b7fff 100%);
+    --green: #3ad29f;
+    --amber: #ffb443;
+    --radius: 16px;
+    --maxw: 1140px;
+    --glow: 0 0 60px -12px rgba(56, 214, 255, .55);
+    font-synthesis: none;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Ambient background: deep radial glow + faint circuit grid echoing the logo */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background:
+      radial-gradient(900px 600px at 75% -10%, rgba(43, 127, 255, .20), transparent 60%),
+      radial-gradient(700px 500px at 10% 0%, rgba(56, 214, 255, .12), transparent 55%),
+      var(--bg);
+  }
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(rgba(56, 214, 255, .035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56, 214, 255, .035) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(1000px 700px at 70% 0%, #000 0%, transparent 75%);
+    -webkit-mask-image: radial-gradient(1000px 700px at 70% 0%, #000 0%, transparent 75%);
+    pointer-events: none;
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  .wrap { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+  .grad-text {
+    background: var(--accent-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* ---------- Nav ---------- */
+  header.nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    transition: background .25s ease, border-color .25s ease, backdrop-filter .25s ease;
+    border-bottom: 1px solid transparent;
+  }
+  header.nav.scrolled {
+    background: rgba(8, 11, 16, .72);
+    backdrop-filter: saturate(160%) blur(14px);
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 68px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 19px; letter-spacing: .2px; }
+  .brand img { width: 34px; height: 34px; border-radius: 9px; box-shadow: 0 0 22px -6px rgba(56,214,255,.7); }
+  .nav-links { display: flex; align-items: center; gap: 30px; }
+  .nav-links a.link { color: var(--text-muted); font-size: 15px; font-weight: 500; transition: color .15s; }
+  .nav-links a.link:hover { color: var(--text); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-weight: 600; font-size: 15px;
+    padding: 11px 20px; border-radius: 11px;
+    border: 1px solid transparent; cursor: pointer;
+    transition: transform .12s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+    white-space: nowrap;
+  }
+  .btn svg { width: 18px; height: 18px; }
+  .btn-primary {
+    color: #04121f;
+    background: var(--accent-grad);
+    box-shadow: 0 10px 30px -10px rgba(43,127,255,.7);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 16px 40px -12px rgba(56,214,255,.8); }
+  .btn-ghost {
+    color: var(--text);
+    background: rgba(255,255,255,.04);
+    border-color: var(--border-bright);
+  }
+  .btn-ghost:hover { transform: translateY(-2px); border-color: var(--cyan); background: rgba(56,214,255,.08); }
+  .btn-lg { padding: 14px 26px; font-size: 16px; }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 80px 0 40px; text-align: center; }
+  .pill-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: 999px;
+    border: 1px solid var(--border-bright);
+    background: rgba(56,214,255,.06);
+    color: var(--text-muted);
+    font-size: 13px; font-weight: 500;
+    margin-bottom: 28px;
+  }
+  .pill-tag .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+
+  .hero-logo {
+    width: 108px; height: 108px; border-radius: 26px;
+    margin: 0 auto 26px;
+    display: block;
+    box-shadow: var(--glow), 0 20px 50px -18px rgba(0,0,0,.8);
+    animation: float 6s ease-in-out infinite;
+  }
+  @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+
+  h1.hero-title {
+    font-size: clamp(2.6rem, 6vw, 4.4rem);
+    line-height: 1.05;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    margin-bottom: 22px;
+  }
+  .hero-sub {
+    font-size: clamp(1.05rem, 2.2vw, 1.3rem);
+    color: var(--text-muted);
+    max-width: 660px;
+    margin: 0 auto 38px;
+  }
+  .hero-sub strong { color: var(--text); font-weight: 600; }
+  .hero-cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .hero-note { margin-top: 18px; font-size: 13.5px; color: var(--text-faint); }
+  .hero-note code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: var(--text-muted); }
+
+  /* ---------- Preview shot ---------- */
+  .preview-wrap { margin: 64px auto 0; max-width: 1000px; position: relative; }
+  .preview-glow {
+    position: absolute; inset: -40px -10px 30px;
+    background: radial-gradient(60% 60% at 50% 0%, rgba(43,127,255,.35), transparent 70%);
+    filter: blur(30px); z-index: -1;
+  }
+  .preview-frame {
+    border: 1px solid var(--border-bright);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--surface);
+    box-shadow: 0 40px 90px -30px rgba(0,0,0,.9), 0 0 0 1px rgba(56,214,255,.06);
+  }
+  .preview-frame img { display: block; width: 100%; height: auto; }
+
+  /* ---------- Section scaffolding ---------- */
+  section { padding: 88px 0; }
+  .sec-head { max-width: 680px; margin-bottom: 52px; }
+  .sec-head.center { margin-left: auto; margin-right: auto; text-align: center; }
+  .eyebrow {
+    text-transform: uppercase; letter-spacing: 2.5px; font-size: 12.5px;
+    font-weight: 700; color: var(--cyan); margin-bottom: 14px;
+  }
+  h2.sec-title { font-size: clamp(1.9rem, 4vw, 2.7rem); font-weight: 800; letter-spacing: -1px; line-height: 1.1; }
+  .sec-desc { margin-top: 16px; color: var(--text-muted); font-size: 1.08rem; }
+
+  /* ---------- Feature grid ---------- */
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .card {
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    transition: transform .18s ease, border-color .2s ease, box-shadow .25s ease;
+  }
+  .card:hover { transform: translateY(-4px); border-color: var(--border-bright); box-shadow: 0 24px 50px -28px rgba(0,0,0,.9); }
+  .card .ico {
+    width: 46px; height: 46px; border-radius: 12px;
+    display: grid; place-items: center; margin-bottom: 18px;
+    background: rgba(56,214,255,.10);
+    border: 1px solid rgba(56,214,255,.22);
+    color: var(--cyan);
+  }
+  .card .ico svg { width: 23px; height: 23px; }
+  .card h3 { font-size: 1.18rem; font-weight: 700; margin-bottom: 9px; letter-spacing: -.2px; }
+  .card p { color: var(--text-muted); font-size: .98rem; }
+
+  /* ---------- Agent control split ---------- */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+  .caps { list-style: none; display: grid; gap: 16px; margin-top: 8px; }
+  .caps li { display: flex; gap: 14px; align-items: flex-start; }
+  .caps .check {
+    flex: none; width: 24px; height: 24px; border-radius: 7px; margin-top: 2px;
+    display: grid; place-items: center;
+    background: rgba(58,210,159,.12); border: 1px solid rgba(58,210,159,.3); color: var(--green);
+  }
+  .caps .check svg { width: 14px; height: 14px; }
+  .caps li span.t { color: var(--text-muted); font-size: 1rem; }
+  .caps li span.t b { color: var(--text); font-weight: 600; }
+
+  /* Terminal mock */
+  .term {
+    border: 1px solid var(--border-bright);
+    border-radius: 14px;
+    overflow: hidden;
+    background: #0a0d13;
+    box-shadow: 0 30px 70px -30px rgba(0,0,0,.9), var(--glow);
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  .term-bar { display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: #0d1119; border-bottom: 1px solid var(--border); }
+  .term-bar .tdot { width: 11px; height: 11px; border-radius: 50%; }
+  .term-bar .r { background: #ff5f57; } .term-bar .y { background: #febc2e; } .term-bar .g { background: #28c840; }
+  .term-bar .title { margin-left: 10px; color: var(--text-faint); font-size: 12.5px; }
+  .term-body { padding: 20px; font-size: 13.5px; line-height: 1.9; }
+  .term-body .pr { color: var(--cyan); }
+  .term-body .cmt { color: var(--text-faint); }
+  .term-body .arr { color: var(--blue); }
+  .term-row { display: flex; align-items: center; gap: 10px; }
+  .sdot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .s-run { background: var(--green); box-shadow: 0 0 9px var(--green); }
+  .s-need { background: var(--amber); box-shadow: 0 0 9px var(--amber); }
+  .s-err { background: #ff5f57; box-shadow: 0 0 9px #ff5f57; }
+  .s-idle { background: #4a5666; }
+  .term-body .name { color: var(--text); }
+  .term-body .state { color: var(--text-faint); margin-left: auto; }
+
+  /* ---------- Status table ---------- */
+  .status-table { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .status-table th { text-align: left; font-size: 12.5px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-faint); font-weight: 700; padding: 16px 22px; background: var(--surface-2); }
+  .status-table td { padding: 15px 22px; border-top: 1px solid var(--border); font-size: .98rem; }
+  .status-table tr td:first-child { color: var(--text); }
+  .status-table tbody tr { transition: background .15s; }
+  .status-table tbody tr:hover { background: rgba(255,255,255,.018); }
+  .badge { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
+  .badge .bd { width: 7px; height: 7px; border-radius: 50%; }
+  .b-ok { color: var(--green); background: rgba(58,210,159,.10); border: 1px solid rgba(58,210,159,.28); }
+  .b-ok .bd { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .b-wip { color: var(--amber); background: rgba(255,180,67,.10); border: 1px solid rgba(255,180,67,.28); }
+  .b-wip .bd { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+  .b-no { color: var(--text-faint); background: rgba(255,255,255,.04); border: 1px solid var(--border); }
+  .b-no .bd { background: #4a5666; }
+  .status-note { margin-top: 18px; color: var(--text-faint); font-size: .92rem; max-width: 720px; }
+
+  /* ---------- Scope ---------- */
+  .scope-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .scope-col { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 30px; }
+  .scope-col.good { border-top: 2px solid var(--green); }
+  .scope-col.out { border-top: 2px solid #ff5f57; }
+  .scope-col h3 { font-size: 1.2rem; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .scope-col ul { list-style: none; display: grid; gap: 14px; }
+  .scope-col li { display: flex; gap: 12px; align-items: flex-start; color: var(--text-muted); font-size: .98rem; }
+  .scope-col li .mk { flex: none; margin-top: 3px; width: 18px; height: 18px; }
+  .good li .mk { color: var(--green); } .out li .mk { color: #ff6b63; }
+  .scope-foot { margin-top: 26px; text-align: center; color: var(--text-muted); font-style: italic; }
+
+  /* ---------- Download CTA ---------- */
+  .download-card {
+    position: relative;
+    border: 1px solid var(--border-bright);
+    border-radius: 24px;
+    padding: 64px 40px;
+    text-align: center;
+    overflow: hidden;
+    background:
+      radial-gradient(700px 320px at 50% -30%, rgba(43,127,255,.28), transparent 70%),
+      linear-gradient(180deg, var(--surface-2), var(--surface));
+  }
+  .download-card h2 { font-size: clamp(2rem, 4.5vw, 3rem); font-weight: 800; letter-spacing: -1px; }
+  .download-card p { color: var(--text-muted); margin: 16px auto 34px; max-width: 540px; font-size: 1.08rem; }
+  .dl-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .dl-meta { margin-top: 26px; display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; color: var(--text-faint); font-size: 13.5px; }
+  .dl-meta span { display: inline-flex; align-items: center; gap: 7px; }
+  .dl-meta svg { width: 15px; height: 15px; color: var(--green); }
+
+  /* ---------- Footer ---------- */
+  footer { border-top: 1px solid var(--border); padding: 56px 0 44px; margin-top: 20px; }
+  .foot-top { display: flex; justify-content: space-between; gap: 40px; flex-wrap: wrap; margin-bottom: 40px; }
+  .foot-brand { max-width: 340px; }
+  .foot-brand .brand { margin-bottom: 14px; }
+  .foot-brand p { color: var(--text-faint); font-size: .92rem; }
+  .foot-cols { display: flex; gap: 64px; flex-wrap: wrap; }
+  .foot-col h4 { font-size: 12.5px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-faint); margin-bottom: 16px; }
+  .foot-col a { display: block; color: var(--text-muted); font-size: .95rem; margin-bottom: 11px; transition: color .15s; }
+  .foot-col a:hover { color: var(--cyan); }
+  .foot-bottom { border-top: 1px solid var(--border); padding-top: 26px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; color: var(--text-faint); font-size: .88rem; }
+  .foot-bottom a { color: var(--text-muted); }
+  .foot-bottom a:hover { color: var(--cyan); }
+
+  /* ---------- Reveal animation ---------- */
+  .reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* ---------- Mobile ---------- */
+  .menu-btn { display: none; background: none; border: 1px solid var(--border-bright); border-radius: 9px; padding: 8px; color: var(--text); cursor: pointer; }
+  .menu-btn svg { width: 22px; height: 22px; display: block; }
+
+  @media (max-width: 900px) {
+    .features { grid-template-columns: 1fr 1fr; }
+    .split { grid-template-columns: 1fr; gap: 38px; }
+    .split .term { order: 2; }
+  }
+  @media (max-width: 720px) {
+    .nav-links { display: none; }
+    .menu-btn { display: inline-flex; }
+    .nav-links.open {
+      display: flex; flex-direction: column; align-items: stretch; gap: 6px;
+      position: absolute; top: 68px; left: 0; right: 0;
+      background: rgba(8,11,16,.96); backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border); padding: 16px 24px 22px;
+    }
+    .nav-links.open a.link { padding: 10px 4px; font-size: 16px; }
+    .nav-links.open .btn { justify-content: center; margin-top: 6px; }
+    section { padding: 64px 0; }
+    .hero { padding: 52px 0 24px; }
+    .features { grid-template-columns: 1fr; }
+    .scope-grid { grid-template-columns: 1fr; }
+    .foot-cols { gap: 40px; }
+    .status-table th:first-child, .status-table td:first-child { white-space: normal; }
+    .term-body { font-size: 12px; padding: 16px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    html { scroll-behavior: auto; }
+    .reveal { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= NAV ================= -->
+<header class="nav" id="nav">
+  <div class="wrap nav-inner">
+    <a href="#top" class="brand">
+      <img src="assets/maxx-logo.png" alt="Maxx logo">
+      Maxx
+    </a>
+    <nav class="nav-links" id="navLinks">
+      <a class="link" href="#different">What's Different</a>
+      <a class="link" href="#agent-control">Agent Control</a>
+      <a class="link" href="#status">Status</a>
+      <a class="link" href="#scope">Scope</a>
+      <a class="link" href="https://github.com/scottmcpherson/maxx" target="_blank" rel="noopener">GitHub</a>
+      <a class="btn btn-primary" href="#download">Download</a>
+    </nav>
+    <button class="menu-btn" id="menuBtn" aria-label="Toggle menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+  </div>
+</header>
+
+<a id="top"></a>
+
+<!-- ================= HERO ================= -->
+<section class="hero">
+  <div class="wrap">
+    <span class="pill-tag"><span class="dot"></span> Unofficial fork of Ghostty · macOS</span>
+    <img class="hero-logo" src="assets/maxx-logo@2x.png" alt="Maxx app icon">
+    <h1 class="hero-title">The <span class="grad-text">Agentic Maxxing</span><br>Terminal</h1>
+    <p class="hero-sub">
+      A fast, native terminal built for running multiple coding agents in parallel —
+      and a terminal that <strong>agents can actually understand</strong>. Sidebar sessions,
+      live agent status, and tab control for Claude Code &amp; Codex.
+    </p>
+    <div class="hero-cta">
+      <a class="btn btn-primary btn-lg" href="https://github.com/scottmcpherson/maxx/releases/latest/download/Maxx.dmg">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.613 0 2.886.06 4.374 2.19-.13.09-2.383 1.37-2.383 4.19 0 3.26 2.854 4.42 2.955 4.45z"/></svg>
+        Download for macOS
+      </a>
+      <a class="btn btn-ghost btn-lg" href="https://github.com/scottmcpherson/maxx" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.37.5 0 5.78 0 12.29c0 5.21 3.44 9.62 8.21 11.18.6.11.82-.25.82-.57 0-.28-.01-1.02-.02-2-3.34.71-4.04-1.58-4.04-1.58-.55-1.37-1.34-1.73-1.34-1.73-1.09-.73.08-.72.08-.72 1.2.08 1.84 1.22 1.84 1.22 1.07 1.8 2.81 1.28 3.5.98.11-.76.42-1.28.76-1.57-2.67-.3-5.47-1.31-5.47-5.81 0-1.28.47-2.33 1.23-3.15-.12-.3-.53-1.51.12-3.15 0 0 1-.32 3.3 1.2.96-.26 1.98-.39 3-.4 1.02.01 2.04.14 3 .4 2.28-1.52 3.29-1.2 3.29-1.2.65 1.64.24 2.85.12 3.15.77.82 1.23 1.87 1.23 3.15 0 4.51-2.81 5.5-5.49 5.79.43.36.81 1.09.81 2.2 0 1.59-.01 2.87-.01 3.26 0 .31.21.69.83.57C20.57 21.9 24 17.5 24 12.29 24 5.78 18.63.5 12 .5z"/></svg>
+        View on GitHub
+      </a>
+    </div>
+    <p class="hero-note">Signed &amp; notarized universal build · built on the <code>maxx-v*</code> release line</p>
+
+    <div class="preview-wrap reveal">
+      <div class="preview-glow"></div>
+      <div class="preview-frame">
+        <img src="assets/maxx-preview.png" alt="Maxx showing a sidebar with multiple coding agent sessions running in parallel">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= WHAT'S DIFFERENT ================= -->
+<section id="different">
+  <div class="wrap">
+    <div class="sec-head center reveal">
+      <div class="eyebrow">What's Different</div>
+      <h2 class="sec-title">Ghostty's core, plus a layer for parallel agents</h2>
+      <p class="sec-desc">Maxx keeps Ghostty's fast native terminal core and adds a focused workflow layer for people running many coding agents at once.</p>
+    </div>
+
+    <div class="features">
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/></svg></div>
+        <h3>Sidebar-first organization</h3>
+        <p>Tabs and sessions live in a sidebar built for switching between many parallel agent terminals at a glance.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg></div>
+        <h3>Live agent status</h3>
+        <p>Sidebar indicators surface each session's state — running, needs input, error, or idle — for supported CLIs.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg></div>
+        <h3>Agent tab control</h3>
+        <p>Claude Code and Codex can open, name, prompt, monitor, and manage Maxx tabs through the optional <code>maxx-tabs</code> skill.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg></div>
+        <h3>macOS-first distribution</h3>
+        <p>A dedicated, signed and notarized release path for the fork — published directly through GitHub Releases.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7h10v10H7z"/><path d="M3 10V5a2 2 0 0 1 2-2h5M21 14v5a2 2 0 0 1-2 2h-5"/></svg></div>
+        <h3>Fork-tagged artifacts</h3>
+        <p>Release artifacts are published from <code>maxx-v*</code> tags, kept separate from upstream Ghostty builds.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg></div>
+        <h3>Stays lightweight</h3>
+        <p>Close to "Ghostty with a sidebar and agent statuses" — low idle overhead, terminal feel intact, easy to maintain against upstream.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= AGENT TAB CONTROL ================= -->
+<section id="agent-control">
+  <div class="wrap split">
+    <div class="reveal">
+      <div class="eyebrow">Agent Tab Control</div>
+      <h2 class="sec-title">A terminal agents can understand</h2>
+      <p class="sec-desc" style="margin-bottom:30px">
+        Maxx isn't just a terminal for running agents — it's one they can work with. The bundled
+        <code>maxx-agent-hook</code> helper and optional <code>maxx-tabs</code> skill let supported
+        agents drive the running Maxx window instead of spawning hidden background processes.
+      </p>
+      <ul class="caps">
+        <li>
+          <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+          <span class="t"><b>Open tabs &amp; windows</b> for another agent session, optionally with an initial prompt.</span>
+        </li>
+        <li>
+          <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+          <span class="t"><b>Start task-specific commands</b> in the same project directory.</span>
+        </li>
+        <li>
+          <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+          <span class="t"><b>List tabs</b> with the foreground process and last reported agent state.</span>
+        </li>
+        <li>
+          <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+          <span class="t"><b>Rename, prompt, and close</b> tabs when you ask an agent to coordinate visible work.</span>
+        </li>
+      </ul>
+      <p class="hero-note" style="margin-top:26px;text-align:left">
+        Install or remove the Claude Code and Codex skills from Maxx Settings, with default permission /
+        sandbox modes for agent-spawned sessions. Explicit agent CLI flags always take precedence.
+      </p>
+    </div>
+
+    <div class="term reveal">
+      <div class="term-bar">
+        <span class="tdot r"></span><span class="tdot y"></span><span class="tdot g"></span>
+        <span class="title">claude — maxx-tabs</span>
+      </div>
+      <div class="term-body">
+        <div><span class="cmt"># ask Claude Code to coordinate visible work</span></div>
+        <div><span class="pr">›</span> <span class="arr">list tabs</span></div>
+        <div class="term-row"><span class="sdot s-run"></span><span class="name">codex / funnel-audit</span><span class="state">running</span></div>
+        <div class="term-row"><span class="sdot s-need"></span><span class="name">claude / attribution</span><span class="state">needsInput</span></div>
+        <div class="term-row"><span class="sdot s-idle"></span><span class="name">codex / test-coverage</span><span class="state">idle</span></div>
+        <div class="term-row"><span class="sdot s-err"></span><span class="name">claude / error</span><span class="state">error</span></div>
+        <div style="margin-top:10px"><span class="pr">›</span> <span class="arr">open tab</span> "deploy" <span class="cmt">--prompt "ship v0.2.3"</span></div>
+        <div><span class="cmt">✓ opened tab · claude session started in ~/Developer/maxx</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= STATUS ================= -->
+<section id="status">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="eyebrow">Platform &amp; Agent Status</div>
+      <h2 class="sec-title">Where things stand today</h2>
+    </div>
+    <div class="reveal">
+      <table class="status-table">
+        <thead><tr><th>Area</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>macOS sidebar tabs / sessions</td><td><span class="badge b-ok"><span class="bd"></span>Supported</span></td></tr>
+          <tr><td>macOS sidebar agent statuses</td><td><span class="badge b-ok"><span class="bd"></span>Supported</span></td></tr>
+          <tr><td>macOS agent tab control skill</td><td><span class="badge b-ok"><span class="bd"></span>Claude Code &amp; Codex</span></td></tr>
+          <tr><td>Claude Code status integration</td><td><span class="badge b-ok"><span class="bd"></span>Automatic</span></td></tr>
+          <tr><td>Codex status integration</td><td><span class="badge b-ok"><span class="bd"></span>Automatic</span></td></tr>
+          <tr><td>X.ai CLI status integration</td><td><span class="badge b-wip"><span class="bd"></span>In progress</span></td></tr>
+          <tr><td>Gemini CLI status integration</td><td><span class="badge b-wip"><span class="bd"></span>In progress</span></td></tr>
+          <tr><td>Linux / GTK sidebar agent statuses</td><td><span class="badge b-no"><span class="bd"></span>Not in UI yet</span></td></tr>
+        </tbody>
+      </table>
+      <p class="status-note">
+        The underlying hook event pipeline is shared infrastructure. Other CLIs can use that pipeline,
+        but only Claude Code and Codex currently have built-in status integration.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SCOPE ================= -->
+<section id="scope">
+  <div class="wrap">
+    <div class="sec-head center reveal">
+      <div class="eyebrow">Project Scope</div>
+      <h2 class="sec-title">Lightweight by design</h2>
+      <p class="sec-desc">Maxx's north star is to stay a lightweight, high-performance Ghostty terminal for running multiple coding agents in parallel.</p>
+    </div>
+    <div class="scope-grid">
+      <div class="scope-col good reveal">
+        <h3>✅ Good fit</h3>
+        <ul>
+          <li><svg class="mk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Agent status integrations for more terminal-first CLIs — Grok, Gemini, and others.</li>
+          <li><svg class="mk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Sidebar and session polish that improves switching between parallel agent terminals.</li>
+          <li><svg class="mk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Terminal correctness, performance, rename, copy/paste, and macOS integration fixes.</li>
+          <li><svg class="mk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Small release, packaging, or distribution improvements for this fork.</li>
+        </ul>
+      </div>
+      <div class="scope-col out reveal">
+        <h3>⛔ Out of scope</h3>
+        <ul>
+          <li><svg class="mk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>Built-in browser panels, dashboards, task boards, or other heavyweight app surfaces.</li>
+          <li><svg class="mk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>Heavyweight agent orchestration or management UI beyond tab control and session status.</li>
+          <li><svg class="mk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>Features that significantly increase idle resource usage or add maintenance-heavy surfaces.</li>
+          <li><svg class="mk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>General-purpose workflow features better handled by agent CLIs or external tools.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="scope-foot">When in doubt, prefer terminal-native, lightweight, and maintainable.</p>
+  </div>
+</section>
+
+<!-- ================= DOWNLOAD ================= -->
+<section id="download">
+  <div class="wrap">
+    <div class="download-card reveal">
+      <h2>Get Maxx</h2>
+      <p>macOS builds are published through GitHub Releases, produced from <code>maxx-v*</code> release tags and signed&nbsp;+&nbsp;notarized.</p>
+      <div class="dl-row">
+        <a class="btn btn-primary btn-lg" href="https://github.com/scottmcpherson/maxx/releases/latest/download/Maxx.dmg">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.613 0 2.886.06 4.374 2.19-.13.09-2.383 1.37-2.383 4.19 0 3.26 2.854 4.42 2.955 4.45z"/></svg>
+          Download DMG
+        </a>
+        <a class="btn btn-ghost btn-lg" href="https://github.com/scottmcpherson/maxx/releases/latest/download/Maxx-macOS-universal.zip">Download .zip</a>
+        <a class="btn btn-ghost btn-lg" href="https://github.com/scottmcpherson/maxx/releases" target="_blank" rel="noopener">All releases</a>
+      </div>
+      <div class="dl-meta">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Universal (Apple Silicon &amp; Intel)</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Signed &amp; notarized</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Build from source with <code>zig build</code></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+  <div class="wrap">
+    <div class="foot-top">
+      <div class="foot-brand">
+        <a href="#top" class="brand"><img src="assets/maxx-logo.png" alt="Maxx logo"> Maxx</a>
+        <p>An unofficial fork of <a href="https://github.com/ghostty-org/ghostty" target="_blank" rel="noopener" style="color:var(--text-muted);text-decoration:underline">Ghostty</a>. Not affiliated with, endorsed by, or maintained by the Ghostty project. Upstream source is MIT licensed.</p>
+      </div>
+      <div class="foot-cols">
+        <div class="foot-col">
+          <h4>Maxx</h4>
+          <a href="#different">What's Different</a>
+          <a href="#agent-control">Agent Control</a>
+          <a href="#status">Status</a>
+          <a href="#download">Download</a>
+        </div>
+        <div class="foot-col">
+          <h4>Project</h4>
+          <a href="https://github.com/scottmcpherson/maxx" target="_blank" rel="noopener">GitHub Repository</a>
+          <a href="https://github.com/scottmcpherson/maxx/releases" target="_blank" rel="noopener">Releases</a>
+          <a href="https://github.com/scottmcpherson/maxx/blob/main/NOTICE" target="_blank" rel="noopener">Notice</a>
+          <a href="https://github.com/scottmcpherson/maxx/blob/main/LICENSE" target="_blank" rel="noopener">License</a>
+        </div>
+        <div class="foot-col">
+          <h4>Ghostty</h4>
+          <a href="https://ghostty.org/docs" target="_blank" rel="noopener">Documentation</a>
+          <a href="https://ghostty.org/docs/about" target="_blank" rel="noopener">About Ghostty</a>
+          <a href="https://github.com/ghostty-org/ghostty" target="_blank" rel="noopener">Upstream Repo</a>
+        </div>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© <span id="year">2026</span> Maxx. Built on <a href="https://github.com/ghostty-org/ghostty" target="_blank" rel="noopener">Ghostty</a>.</span>
+      <span>Made for people running a lot of agents at once.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Sticky nav background on scroll
+  const nav = document.getElementById('nav');
+  const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 12);
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  // Mobile menu
+  const menuBtn = document.getElementById('menuBtn');
+  const navLinks = document.getElementById('navLinks');
+  menuBtn.addEventListener('click', () => navLinks.classList.toggle('open'));
+  navLinks.addEventListener('click', e => { if (e.target.tagName === 'A') navLinks.classList.remove('open'); });
+
+  // Scroll reveal
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // Footer year
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
