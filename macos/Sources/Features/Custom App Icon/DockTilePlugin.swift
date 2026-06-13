@@ -51,7 +51,7 @@ class DockTilePlugin: NSObject, NSDockTilePlugIn {
     private func resetIcon(dockTile: NSDockTile) {
         let appIcon: NSImage?
         #if DEBUG
-        appIcon = pluginBundle.image(forResource: "BlueprintImage")!
+        appIcon = pluginBundle.image(forResource: "DevAppIconImage")!
         #else
         if #available(macOS 26.0, *) {
             // Reset to the bundled app icon.
