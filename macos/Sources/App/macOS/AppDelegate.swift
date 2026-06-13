@@ -196,24 +196,31 @@ class AppDelegate: NSObject,
         ])
     }
 
-    /// Copies persisted user defaults from the bundle id this app shipped
-    /// under before the MadMaxx rename (com.scottmcpherson.mosttly-ghostty).
+    /// Copies persisted user defaults from bundle ids this app shipped under
+    /// before the Maxx rename.
     /// Runs once per defaults domain; values already set under the new bundle
     /// id are never overwritten.
     private func migrateLegacyDefaultsIfNeeded() {
         guard let bundleID = Bundle.main.bundleIdentifier else { return }
-        let legacyDomain = bundleID.replacingOccurrences(
-            of: "com.scottmcpherson.madmaxx",
-            with: "com.scottmcpherson.mosttly-ghostty")
-        guard legacyDomain != bundleID else { return }
+        let legacyDomains = [
+            bundleID.replacingOccurrences(
+                of: "com.scottmcpherson.maxx",
+                with: "com.scottmcpherson.madmaxx"),
+            bundleID.replacingOccurrences(
+                of: "com.scottmcpherson.maxx",
+                with: "com.scottmcpherson.mosttly-ghostty"),
+        ].filter { $0 != bundleID }
+        guard !legacyDomains.isEmpty else { return }
 
-        let migratedKey = "MadMaxxDidMigrateLegacyDefaults"
+        let migratedKey = "MaxxDidMigrateLegacyDefaults"
         let defaults = UserDefaults.standard
         guard !defaults.bool(forKey: migratedKey) else { return }
 
         var domain = defaults.persistentDomain(forName: bundleID) ?? [:]
-        if let legacy = defaults.persistentDomain(forName: legacyDomain) {
-            domain.merge(legacy) { current, _ in current }
+        for legacyDomain in legacyDomains {
+            if let legacy = defaults.persistentDomain(forName: legacyDomain) {
+                domain.merge(legacy) { current, _ in current }
+            }
         }
         domain[migratedKey] = true
         defaults.setPersistentDomain(domain, forName: bundleID)
@@ -520,7 +527,7 @@ class AppDelegate: NSObject,
             // may want to show this as a sheet on the focused window (especially if we're
             // opening a tab). I'm not sure.
             let alert = NSAlert()
-            alert.messageText = "Allow MadMaxx to execute \"\(filename)\"?"
+            alert.messageText = "Allow Maxx to execute \"\(filename)\"?"
             alert.addButton(withTitle: "Allow")
             alert.addButton(withTitle: "Cancel")
             alert.alertStyle = .warning
@@ -1347,7 +1354,7 @@ extension AppDelegate {
         if controllersNeedConfirmation.count == 1 {
             Task {
                 let response = await controllersNeedConfirmation[0].confirmCloseAsync(
-                    messageText: "Quit MadMaxx?",
+                    messageText: "Quit Maxx?",
                     informativeText: "The terminal still has a running process. If you quit, the process will be killed.",
                     confirmButtonTitle: "Terminate",
                 )
@@ -1385,7 +1392,7 @@ extension AppDelegate {
         Task {
             for controller in controllers {
                 let response = await controller.confirmCloseAsync(
-                    messageText: "Quit MadMaxx?",
+                    messageText: "Quit Maxx?",
                     informativeText: "The terminal still has a running process. If you quit, the process will be killed.",
                     confirmButtonTitle: "Terminate",
                 )

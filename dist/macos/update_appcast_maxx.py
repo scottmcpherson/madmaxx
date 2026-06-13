@@ -1,13 +1,13 @@
 """
-Generate a stable-only Sparkle appcast for MadMaxx GitHub Releases.
+Generate a stable-only Sparkle appcast for Maxx GitHub Releases.
 
 Expected files in the current directory:
-    - sign_update.txt: output from Sparkle's sign_update tool for MadMaxx.dmg
+    - sign_update.txt: output from Sparkle's sign_update tool for Maxx.dmg
 
 Expected environment variables:
     - MOSTTLY_VERSION: CFBundleShortVersionString, for example 0.1.0
     - MOSTTLY_BUILD: CFBundleVersion, monotonically increasing build number
-    - MOSTTLY_RELEASE_TAG: GitHub release tag, for example madmaxx-v0.1.0
+    - MOSTTLY_RELEASE_TAG: GitHub release tag, for example maxx-v0.1.0
     - MOSTTLY_COMMIT: short commit hash
     - MOSTTLY_COMMIT_LONG: full commit hash
 
@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
 SPARKLE_NS = "http://www.andymatuschak.org/xml-namespaces/sparkle"
-REPO = "https://github.com/scottmcpherson/madmaxx"
+REPO = "https://github.com/scottmcpherson/maxx"
 
 
 def sparkle(name):
@@ -58,17 +58,17 @@ commit = os.environ["MOSTTLY_COMMIT"]
 commit_long = os.environ["MOSTTLY_COMMIT_LONG"]
 
 release_url = f"{REPO}/releases/tag/{tag}"
-download_url = f"{REPO}/releases/download/{tag}/MadMaxx.dmg"
+download_url = f"{REPO}/releases/download/{tag}/Maxx.dmg"
 
 rss = ET.Element("rss", {"version": "2.0"})
 channel = ET.SubElement(rss, "channel")
-sub(channel, "title", "MadMaxx Updates")
+sub(channel, "title", "Maxx Updates")
 sub(channel, "link", f"{REPO}/releases")
-sub(channel, "description", "Stable macOS releases for MadMaxx.")
+sub(channel, "description", "Stable macOS releases for Maxx.")
 sub(channel, "language", "en")
 
 item = ET.SubElement(channel, "item")
-sub(item, "title", f"MadMaxx {version}")
+sub(item, "title", f"Maxx {version}")
 sub(item, "pubDate", now.strftime(pubdate_format))
 sub(item, sparkle("version"), build)
 sub(item, sparkle("shortVersionString"), version)
@@ -77,7 +77,7 @@ sub(item, sparkle("fullReleaseNotesLink"), release_url)
 sub(
     item,
     "description",
-    f"MadMaxx {version}, built from commit {commit} ({commit_long}).",
+    f"Maxx {version}, built from commit {commit} ({commit_long}).",
 )
 
 enclosure = ET.SubElement(item, "enclosure")

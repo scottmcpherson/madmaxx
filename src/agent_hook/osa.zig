@@ -7,13 +7,13 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 /// Bundle id used when the inherited __CFBundleIdentifier is unavailable.
-pub const default_bundle_id = "com.scottmcpherson.madmaxx";
+pub const default_bundle_id = "com.scottmcpherson.maxx";
 
-/// Requires the surface id env var that marks "inside a MadMaxx terminal".
+/// Requires the surface id env var that marks "inside a Maxx terminal".
 pub fn requireSurfaceId(alloc: Allocator) ![]const u8 {
     return try envOwned(alloc, "GHOSTTY_AGENT_SURFACE_ID") orelse {
         fail(
-            "this command must be run inside a MadMaxx terminal " ++
+            "this command must be run inside a Maxx terminal " ++
                 "(GHOSTTY_AGENT_SURFACE_ID is not set)",
             .{},
         );

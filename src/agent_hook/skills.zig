@@ -1,6 +1,6 @@
-//! Installs the "madmaxx-tabs" agent skill that teaches Claude Code and
+//! Installs the "maxx-tabs" agent skill that teaches Claude Code and
 //! Codex how to open new tabs in the running app via
-//! `madmaxx-agent-hook new-tab`.
+//! `maxx-agent-hook new-tab`.
 //!
 //! Claude Code discovers personal skills in `~/.claude/skills` (or
 //! `$CLAUDE_CONFIG_DIR/skills`). Codex discovers user skills in
@@ -10,23 +10,36 @@ const std = @import("std");
 
 const Allocator = std.mem.Allocator;
 
-pub const skill_dir_name = "madmaxx-tabs";
+pub const skill_dir_name = "maxx-tabs";
 pub const skill_content = @embedFile("skill/SKILL.md");
 
-/// Skill directory name used by older releases. Install and uninstall
-/// remove it (when we own it) so upgrades don't leave a stale copy behind.
-pub const legacy_skill_dir_name = "mosttly-tabs";
+/// Skill directory names used by older releases. Install and uninstall
+/// remove them (when we own them) so upgrades don't leave stale copies behind.
+const legacy_madmaxx_skill_dir_name = "madmaxx-tabs";
+const legacy_mosttly_skill_dir_name = "mosttly-tabs";
+const legacy_skill_dir_names = [_][]const u8{
+    legacy_madmaxx_skill_dir_name,
+    legacy_mosttly_skill_dir_name,
+};
 
 /// Marker that identifies skill files we own. Uninstall refuses to delete
 /// files without it so we never destroy a user's hand-written skill.
-const ownership_marker = "managed by madmaxx-agent-hook";
+const ownership_marker = "managed by maxx-agent-hook";
 
-/// Marker written by older releases; still counts as ours.
-const legacy_ownership_marker = "managed by ghostty-agent-hook";
+/// Markers written by older releases; still count as ours.
+const legacy_madmaxx_ownership_marker = "managed by madmaxx-agent-hook";
+const legacy_ghostty_ownership_marker = "managed by ghostty-agent-hook";
+const legacy_ownership_markers = [_][]const u8{
+    legacy_madmaxx_ownership_marker,
+    legacy_ghostty_ownership_marker,
+};
 
 fn isOwnedContent(content: []const u8) bool {
-    return std.mem.indexOf(u8, content, ownership_marker) != null or
-        std.mem.indexOf(u8, content, legacy_ownership_marker) != null;
+    if (std.mem.indexOf(u8, content, ownership_marker) != null) return true;
+    for (legacy_ownership_markers) |marker| {
+        if (std.mem.indexOf(u8, content, marker) != null) return true;
+    }
+    return false;
 }
 
 pub fn installClaude(alloc: Allocator) !void {
@@ -114,11 +127,13 @@ pub fn removeSkill(alloc: Allocator, skills_root: []const u8) ![]const u8 {
 /// Removes an old-named install if we own it. A hand-written skill that
 /// happens to use the old name is left alone.
 fn removeLegacySkill(alloc: Allocator, skills_root: []const u8) !void {
-    if (removeSkillDir(alloc, skills_root, legacy_skill_dir_name)) |path| {
-        alloc.free(path);
-    } else |err| switch (err) {
-        error.ForeignSkillExists => {},
-        else => return err,
+    for (legacy_skill_dir_names) |dir_name| {
+        if (removeSkillDir(alloc, skills_root, dir_name)) |path| {
+            alloc.free(path);
+        } else |err| switch (err) {
+            error.ForeignSkillExists => {},
+            else => return err,
+        }
     }
 }
 
@@ -169,10 +184,10 @@ fn envOwned(alloc: Allocator, key: []const u8) !?[]const u8 {
 test "skill content has required frontmatter and ownership marker" {
     const testing = std.testing;
     try testing.expect(std.mem.startsWith(u8, skill_content, "---\n"));
-    try testing.expect(std.mem.indexOf(u8, skill_content, "name: madmaxx-tabs") != null);
+    try testing.expect(std.mem.indexOf(u8, skill_content, "name: maxx-tabs") != null);
     try testing.expect(std.mem.indexOf(u8, skill_content, "description: ") != null);
     try testing.expect(std.mem.indexOf(u8, skill_content, ownership_marker) != null);
-    try testing.expect(std.mem.indexOf(u8, skill_content, "madmaxx-agent-hook new-tab") != null);
+    try testing.expect(std.mem.indexOf(u8, skill_content, "maxx-agent-hook new-tab") != null);
 }
 
 test "write and remove skill round trip" {
@@ -213,7 +228,7 @@ test "write and remove refuse foreign skill files" {
     defer tmp.cleanup();
 
     try tmp.dir.makePath(skill_dir_name);
-    const foreign = "---\nname: madmaxx-tabs\n---\nuser-authored skill\n";
+    const foreign = "---\nname: maxx-tabs\n---\nuser-authored skill\n";
     try tmp.dir.writeFile(.{
         .sub_path = skill_dir_name ++ "/SKILL.md",
         .data = foreign,
@@ -238,10 +253,10 @@ test "install migrates legacy-named skill dir we own" {
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
 
-    try tmp.dir.makePath(legacy_skill_dir_name);
+    try tmp.dir.makePath(legacy_madmaxx_skill_dir_name);
     try tmp.dir.writeFile(.{
-        .sub_path = legacy_skill_dir_name ++ "/SKILL.md",
-        .data = "---\nname: mosttly-tabs\n---\n<!-- " ++ legacy_ownership_marker ++ " -->\n",
+        .sub_path = legacy_madmaxx_skill_dir_name ++ "/SKILL.md",
+        .data = "---\nname: madmaxx-tabs\n---\n<!-- " ++ legacy_madmaxx_ownership_marker ++ " -->\n",
     });
 
     const root = try tmp.dir.realpathAlloc(alloc, ".");
@@ -252,7 +267,29 @@ test "install migrates legacy-named skill dir we own" {
 
     // New skill exists, old-named dir is gone.
     try tmp.dir.access(skill_dir_name ++ "/SKILL.md", .{});
-    try testing.expectError(error.FileNotFound, tmp.dir.access(legacy_skill_dir_name, .{}));
+    try testing.expectError(error.FileNotFound, tmp.dir.access(legacy_madmaxx_skill_dir_name, .{}));
+}
+
+test "install migrates old mosttly-named skill dir we own" {
+    const testing = std.testing;
+    const alloc = testing.allocator;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    try tmp.dir.makePath(legacy_mosttly_skill_dir_name);
+    try tmp.dir.writeFile(.{
+        .sub_path = legacy_mosttly_skill_dir_name ++ "/SKILL.md",
+        .data = "---\nname: mosttly-tabs\n---\n<!-- " ++ legacy_ghostty_ownership_marker ++ " -->\n",
+    });
+
+    const root = try tmp.dir.realpathAlloc(alloc, ".");
+    defer alloc.free(root);
+
+    const written = try writeSkill(alloc, root);
+    defer alloc.free(written);
+
+    try tmp.dir.access(skill_dir_name ++ "/SKILL.md", .{});
+    try testing.expectError(error.FileNotFound, tmp.dir.access(legacy_mosttly_skill_dir_name, .{}));
 }
 
 test "install leaves a hand-written legacy-named skill alone" {
@@ -261,10 +298,10 @@ test "install leaves a hand-written legacy-named skill alone" {
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
 
-    try tmp.dir.makePath(legacy_skill_dir_name);
+    try tmp.dir.makePath(legacy_mosttly_skill_dir_name);
     const foreign = "---\nname: mosttly-tabs\n---\nuser-authored skill\n";
     try tmp.dir.writeFile(.{
-        .sub_path = legacy_skill_dir_name ++ "/SKILL.md",
+        .sub_path = legacy_mosttly_skill_dir_name ++ "/SKILL.md",
         .data = foreign,
     });
 
@@ -274,7 +311,7 @@ test "install leaves a hand-written legacy-named skill alone" {
     const written = try writeSkill(alloc, root);
     defer alloc.free(written);
 
-    const foreign_path = try std.fs.path.join(alloc, &.{ root, legacy_skill_dir_name, "SKILL.md" });
+    const foreign_path = try std.fs.path.join(alloc, &.{ root, legacy_mosttly_skill_dir_name, "SKILL.md" });
     defer alloc.free(foreign_path);
     const contents = try readFileAllocIfExists(alloc, foreign_path);
     defer alloc.free(contents);

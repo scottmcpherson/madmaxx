@@ -2,7 +2,7 @@
 Version=1.0
 Name=@NAME@
 Type=Application
-Comment=A terminal emulator
+Comment=Agentic Maxxing Terminal
 TryExec=@GHOSTTY@
 Exec=@GHOSTTY@ --gtk-single-instance=true
 Icon=com.mitchellh.ghostty

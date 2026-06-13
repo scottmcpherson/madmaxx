@@ -1743,7 +1743,7 @@ pub const Window = extern struct {
         _: ?*glib.Variant,
         self: *Self,
     ) callconv(.c) void {
-        const name = "MadMaxx";
+        const name = "Maxx";
         const icon = "com.mitchellh.ghostty";
         const website = "https://ghostty.org";
 
@@ -1753,7 +1753,7 @@ pub const Window = extern struct {
                 "application-name",
                 name,
                 "developer-name",
-                i18n._("MadMaxx Developers"),
+                i18n._("Maxx Developers"),
                 "application-icon",
                 icon,
                 "version",
@@ -1772,7 +1772,7 @@ pub const Window = extern struct {
                 "logo-icon-name",
                 icon,
                 "title",
-                i18n._("About MadMaxx"),
+                i18n._("About Maxx"),
                 "version",
                 build_config.version_string.ptr,
                 "website",

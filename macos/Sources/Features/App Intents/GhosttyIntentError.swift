@@ -5,9 +5,9 @@ enum GhosttyIntentError: Error, CustomLocalizedStringResourceConvertible {
 
     var localizedStringResource: LocalizedStringResource {
         switch self {
-        case .appUnavailable: "The MadMaxx app isn't properly initialized."
+        case .appUnavailable: "The Maxx app isn't properly initialized."
         case .surfaceNotFound: "The terminal no longer exists."
-        case .permissionDenied: "MadMaxx doesn't allow Shortcuts."
+        case .permissionDenied: "Maxx doesn't allow Shortcuts."
         }
     }
 }

@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// App-wide controller for the one-time, opt-in prompt that offers to install the
-/// "madmaxx-tabs" tab-control skill for the agents the user actually has (Claude
+/// "maxx-tabs" tab-control skill for the agents the user actually has (Claude
 /// Code and/or Codex). It shows at most one non-modal banner across all windows,
 /// attached to the front terminal window.
 ///
@@ -143,11 +143,11 @@ final class AgentSkillsPromptController {
     private static func title(for candidates: Candidates) -> String {
         switch (candidates.claude, candidates.codex) {
         case (true, true):
-            return "Install MadMaxx skills for Claude Code and Codex?"
+            return "Install Maxx skills for Claude Code and Codex?"
         case (true, false):
-            return "Install the MadMaxx skill for Claude Code?"
+            return "Install the Maxx skill for Claude Code?"
         default:
-            return "Install the MadMaxx skill for Codex?"
+            return "Install the Maxx skill for Codex?"
         }
     }
 
@@ -285,9 +285,9 @@ private struct AgentSkillsPromptBanner: View {
                 Text(model.title)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color(nsColor: theme.foreground))
-                Text("Gives agents the ability to create and manage tabs in MadMaxx — "
+                Text("Gives agents the ability to create and manage tabs in Maxx — "
                     + "for example, ask one to start another session in a new tab. "
-                    + "Installs the madmaxx-tabs skill in your home folder; you can "
+                    + "Installs the maxx-tabs skill in your home folder; you can "
                     + "remove it anytime in Settings.")
                     .font(.system(size: 11))
                     .foregroundStyle(Color(nsColor: theme.mutedForeground))
@@ -313,7 +313,7 @@ private struct AgentSkillsPromptBanner: View {
                 .stroke(Color(nsColor: theme.separator), lineWidth: 1))
         .shadow(color: .black.opacity(0.12), radius: 4, y: 1)
         .environment(\.colorScheme, theme.colorScheme)
-        .accessibilityIdentifier("MadMaxxAgentSkillsPromptBanner")
+        .accessibilityIdentifier("MaxxAgentSkillsPromptBanner")
     }
 
     @ViewBuilder
@@ -328,7 +328,7 @@ private struct AgentSkillsPromptBanner: View {
                     .buttonStyle(.bordered)
                 Button("Install", action: model.onInstall)
                     .buttonStyle(.borderedProminent)
-                    .accessibilityIdentifier("MadMaxxAgentSkillsPromptInstallButton")
+                    .accessibilityIdentifier("MaxxAgentSkillsPromptInstallButton")
             }
 
         case .installing:

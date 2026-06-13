@@ -1967,7 +1967,7 @@ const Action = struct {
 
         // Set a default title if we don't already have one
         const t = switch (n.title.len) {
-            0 => "MadMaxx",
+            0 => "Maxx",
             else => n.title,
         };
 

@@ -181,7 +181,7 @@ pub const Target = enum(c_int) {
 
     pub fn title(self: Target) [*:0]const u8 {
         return switch (self) {
-            .app => i18n._("Quit MadMaxx?"),
+            .app => i18n._("Quit Maxx?"),
             .tab => i18n._("Close Tab?"),
             .window => i18n._("Close Window?"),
             .surface => i18n._("Close Split?"),
