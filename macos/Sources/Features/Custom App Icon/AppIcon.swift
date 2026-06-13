@@ -3,6 +3,7 @@ import System
 
 /// The icon style for the Ghostty App.
 enum AppIcon: Equatable, Codable, Sendable {
+    case dev
     case official
     case blueprint
     case chalkboard
@@ -59,6 +60,8 @@ enum AppIcon: Equatable, Codable, Sendable {
 
     func image(in bundle: Bundle) -> NSImage? {
         switch self {
+        case .dev:
+            return bundle.image(forResource: "DevAppIconImage")!
         case .official:
             return nil
         case .blueprint:
@@ -116,7 +119,7 @@ actor AppIconUpdater {
 
     private static var defaultIcon: AppIcon? {
         #if DEBUG
-        return .blueprint
+        return .dev
         #else
         return nil
         #endif

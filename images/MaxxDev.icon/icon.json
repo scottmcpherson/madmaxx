@@ -8,12 +8,12 @@
           "blend-mode": "normal",
           "fill": "automatic",
           "hidden": false,
-          "image-name": "Maxx.png",
-          "name": "Maxx"
+          "image-name": "MaxxDev.png",
+          "name": "Maxx Dev"
         }
       ],
       "lighting": "individual",
-      "name": "Maxx",
+      "name": "Maxx Dev",
       "shadow": {
         "kind": "neutral",
         "opacity": 0.5
