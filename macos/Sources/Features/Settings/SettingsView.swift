@@ -7,12 +7,16 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             Form {
-                Section("Claude Code") {
+                Section {
                     claudeContent
+                } header: {
+                    agentSectionHeader(title: "Claude Code", imageName: "ClaudeAgentIcon")
                 }
 
-                Section("Codex") {
+                Section {
                     codexContent
+                } header: {
+                    agentSectionHeader(title: "Codex", imageName: "CodexAgentIcon")
                 }
 
                 Section("Maxx") {
@@ -48,23 +52,12 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var claudeContent: some View {
-        if model.claudeConfigured {
-            statusRow(title: "Configured", systemImage: "checkmark.circle.fill", tint: .green)
-        } else {
-            statusRow(title: "Not detected", systemImage: "circle", tint: .secondary)
-            LabeledContent("Claude Code CLI") {
-                Button("How to Enable…", action: model.openClaudeDocs)
-                    .buttonStyle(.bordered)
-                    .accessibilityIdentifier("MaxxSettingsClaudeHelpButton")
-            }
-        }
-
-        skillRow(
-            status: model.claudeSkillStatus,
-            install: model.installClaudeSkill,
-            uninstall: model.uninstallClaudeSkill,
+        integrationRow(
+            status: model.claudeIntegrationStatus,
+            install: model.installClaudeIntegration,
+            uninstall: model.uninstallClaudeIntegration,
             helpText: "Lets Claude Code open new Maxx tabs and run commands in them",
-            accessibilityPrefix: "MaxxSettingsClaudeSkill")
+            accessibilityPrefix: "MaxxSettingsClaudeIntegration")
 
         Picker("Agent tab permission mode", selection: $model.claudeTabPermissionMode) {
             Text("Default").tag("default")
@@ -83,53 +76,12 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var codexContent: some View {
-        statusRow(
-            title: model.codexStatus.title,
-            systemImage: model.codexStatus.systemImage,
-            tint: model.codexStatus.tint)
-
-        switch model.codexStatus {
-        case .installed:
-            LabeledContent("Hook files") {
-                Button("Reveal in Finder", action: model.revealCodexHooks)
-                    .buttonStyle(.bordered)
-                    .accessibilityIdentifier("MaxxSettingsRevealCodexHooksButton")
-            }
-            LabeledContent("Maxx integration") {
-                Button("Uninstall Hooks", action: model.uninstallCodexHooks)
-                    .buttonStyle(.bordered)
-                    .accessibilityIdentifier("MaxxSettingsUninstallCodexHooksButton")
-            }
-
-        case .installing:
-            HStack(spacing: 8) {
-                ProgressView()
-                    .controlSize(.small)
-                Text("Working…")
-                    .foregroundStyle(.secondary)
-            }
-
-        case .notInstalled, .failed:
-            LabeledContent("Maxx integration") {
-                Button("Install Hooks", action: model.installCodexHooks)
-                    .buttonStyle(.borderedProminent)
-                    .accessibilityIdentifier("MaxxSettingsInstallCodexHooksButton")
-            }
-
-            if case .failed(let message) = model.codexStatus {
-                Text(message)
-                    .font(.callout)
-                    .foregroundStyle(.red)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-
-        skillRow(
-            status: model.codexSkillStatus,
-            install: model.installCodexSkill,
-            uninstall: model.uninstallCodexSkill,
-            helpText: "Lets Codex open new Maxx tabs and run commands in them",
-            accessibilityPrefix: "MaxxSettingsCodexSkill")
+        integrationRow(
+            status: model.codexIntegrationStatus,
+            install: model.installCodexIntegration,
+            uninstall: model.uninstallCodexIntegration,
+            helpText: "Installs Codex hooks and the Maxx tab-control skill",
+            accessibilityPrefix: "MaxxSettingsCodexIntegration")
 
         Picker("Agent tab sandbox mode", selection: $model.codexTabSandboxMode) {
             Text("Default").tag("default")
@@ -146,55 +98,64 @@ struct SettingsView: View {
 
     // MARK: - Helpers
 
-    /// Install/remove row for the "maxx-tabs" tab-control skill, shared by
-    /// the Claude Code and Codex sections.
+    private func agentSectionHeader(title: String, imageName: String) -> some View {
+        HStack(spacing: 8) {
+            Image(imageName)
+                .resizable()
+                .interpolation(.high)
+                .scaledToFit()
+                .frame(width: 18, height: 18)
+                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                .accessibilityHidden(true)
+
+            Text(title)
+        }
+        .font(.headline.weight(.semibold))
+        .foregroundStyle(.primary)
+        .accessibilityElement(children: .combine)
+    }
+
     @ViewBuilder
-    private func skillRow(
-        status: AgentInstallStatus,
+    private func integrationRow(
+        status: AgentIntegrationStatus,
         install: @escaping () -> Void,
         uninstall: @escaping () -> Void,
         helpText: String,
         accessibilityPrefix: String
     ) -> some View {
-        switch status {
-        case .installed:
-            LabeledContent("Tab control skill") {
-                Button("Remove Skill", action: uninstall)
+        LabeledContent("Maxx integration") {
+            switch status {
+            case .installed:
+                Button("Remove", action: uninstall)
                     .buttonStyle(.bordered)
                     .accessibilityIdentifier("\(accessibilityPrefix)RemoveButton")
-            }
 
-        case .installing:
-            HStack(spacing: 8) {
-                ProgressView()
-                    .controlSize(.small)
-                Text("Working…")
-                    .foregroundStyle(.secondary)
-            }
+            case .installing:
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Working…")
+                        .foregroundStyle(.secondary)
+                }
 
-        case .notInstalled, .failed:
-            LabeledContent("Tab control skill") {
-                Button("Install Skill", action: install)
+            case .notInstalled:
+                Button("Install", action: install)
                     .buttonStyle(.borderedProminent)
                     .accessibilityIdentifier("\(accessibilityPrefix)InstallButton")
-            }
-            .help(helpText)
 
-            if case .failed(let message) = status {
-                Text(message)
-                    .font(.callout)
-                    .foregroundStyle(.red)
-                    .fixedSize(horizontal: false, vertical: true)
+            case .failed:
+                Button("Retry", action: install)
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("\(accessibilityPrefix)RetryButton")
             }
         }
-    }
+        .help(helpText)
 
-    private func statusRow(title: String, systemImage: String, tint: Color) -> some View {
-        Label {
-            Text(title)
-        } icon: {
-            Image(systemName: systemImage)
-                .foregroundStyle(tint)
+        if let failureMessage = status.failureMessage {
+            Text(failureMessage)
+                .font(.callout)
+                .foregroundStyle(.red)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -206,7 +167,6 @@ final class SettingsViewModel: ObservableObject {
     static let claudeTabPermissionModeKey = "agentTabClaudePermissionMode"
     static let codexTabSandboxModeKey = "agentTabCodexSandboxMode"
 
-    @Published private(set) var claudeConfigured = false
     @Published private(set) var claudeSkillStatus: AgentInstallStatus = .notInstalled
     @Published private(set) var codexStatus: AgentInstallStatus = .notInstalled
     @Published private(set) var codexSkillStatus: AgentInstallStatus = .notInstalled
@@ -226,6 +186,24 @@ final class SettingsViewModel: ObservableObject {
             UserDefaults.standard.string(forKey: Self.codexTabSandboxModeKey) ?? "default"
     }
 
+    var claudeIntegrationStatus: AgentIntegrationStatus {
+        AgentIntegrationStatus(skillStatus: claudeSkillStatus)
+    }
+
+    var codexIntegrationStatus: AgentIntegrationStatus {
+        if codexStatus == .installing || codexSkillStatus == .installing {
+            return .installing
+        }
+
+        if let failureMessage = Self.failureMessage(in: [codexStatus, codexSkillStatus]) {
+            return .failed(failureMessage)
+        }
+
+        return codexStatus == .installed && codexSkillStatus == .installed
+            ? .installed
+            : .notInstalled
+    }
+
     /// "default" means "no opinion", which we persist as an absent key so the
     /// helper can skip the lookup cleanly.
     private static func persistMode(_ mode: String, forKey key: String) {
@@ -237,15 +215,11 @@ final class SettingsViewModel: ObservableObject {
     }
 
     func refresh() {
-        claudeConfigured = CodexHooksManager.claudeConfigured()
         if claudeSkillStatus != .installing {
             claudeSkillStatus = CodexHooksManager.claudeSkillInstalled() ? .installed : .notInstalled
         }
-        if codexStatus != .installing {
-            codexStatus = CodexHooksManager.hooksInstalled() ? .installed : .notInstalled
-        }
-        if codexSkillStatus != .installing {
-            codexSkillStatus = CodexHooksManager.codexSkillInstalled() ? .installed : .notInstalled
+        if codexStatus != .installing && codexSkillStatus != .installing {
+            refreshCodexIntegrationStatus()
         }
     }
 
@@ -253,57 +227,90 @@ final class SettingsViewModel: ObservableObject {
         (NSApp.delegate as? AppDelegate)?.openConfig(nil)
     }
 
-    func openClaudeDocs() {
-        guard let url = URL(string: "https://www.anthropic.com/claude-code") else { return }
-        NSWorkspace.shared.open(url)
-    }
-
-    func installCodexHooks() {
-        runCodexHook(action: "install", failureFallback: "Install failed.")
-    }
-
-    func uninstallCodexHooks() {
-        runCodexHook(action: "uninstall", failureFallback: "Uninstall failed.")
-    }
-
-    func revealCodexHooks() {
-        CodexHooksManager.revealHooks()
-    }
-
-    func installClaudeSkill() {
+    func installClaudeIntegration() {
         runSkillHelper(action: "install", agent: "claude", status: \.claudeSkillStatus,
                        installed: CodexHooksManager.claudeSkillInstalled)
     }
 
-    func uninstallClaudeSkill() {
+    func uninstallClaudeIntegration() {
         runSkillHelper(action: "uninstall", agent: "claude", status: \.claudeSkillStatus,
                        installed: CodexHooksManager.claudeSkillInstalled)
     }
 
-    func installCodexSkill() {
-        runSkillHelper(action: "install", agent: "codex-skill", status: \.codexSkillStatus,
-                       installed: CodexHooksManager.codexSkillInstalled)
+    func installCodexIntegration() {
+        runCodexIntegration(.install)
     }
 
-    func uninstallCodexSkill() {
-        runSkillHelper(action: "uninstall", agent: "codex-skill", status: \.codexSkillStatus,
-                       installed: CodexHooksManager.codexSkillInstalled)
+    func uninstallCodexIntegration() {
+        runCodexIntegration(.uninstall)
     }
 
-    private func runCodexHook(action: String, failureFallback: String) {
-        guard codexStatus != .installing else { return }
+    private enum CodexIntegrationAction {
+        case install
+        case uninstall
+    }
+
+    private func runCodexIntegration(_ action: CodexIntegrationAction) {
+        guard codexStatus != .installing && codexSkillStatus != .installing else { return }
 
         codexStatus = .installing
+        codexSkillStatus = .installing
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let result = CodexHooksManager.runHook(action: action)
+            let failure: String?
+            switch action {
+            case .install:
+                failure = Self.installCodexIntegrationComponents()
+            case .uninstall:
+                failure = Self.uninstallCodexIntegrationComponents()
+            }
+
             DispatchQueue.main.async {
                 guard let self else { return }
-                if result.success {
-                    self.codexStatus = CodexHooksManager.hooksInstalled() ? .installed : .notInstalled
-                } else {
-                    self.codexStatus = .failed(result.message ?? failureFallback)
-                }
+                self.refreshCodexIntegrationStatus(failureMessage: failure)
             }
+        }
+    }
+
+    private static func installCodexIntegrationComponents() -> String? {
+        if !CodexHooksManager.hooksInstalled() {
+            let result = CodexHooksManager.runHook(action: "install")
+            guard result.success else { return result.message ?? "Install failed." }
+        }
+
+        if !CodexHooksManager.codexSkillInstalled() {
+            let result = CodexHooksManager.runHelper(arguments: ["install", "codex-skill"])
+            guard result.success else { return result.message ?? "Install failed." }
+        }
+
+        return nil
+    }
+
+    private static func uninstallCodexIntegrationComponents() -> String? {
+        var failure: String?
+
+        let hookResult = CodexHooksManager.runHook(action: "uninstall")
+        if !hookResult.success {
+            failure = hookResult.message ?? "Uninstall failed."
+        }
+
+        let skillResult = CodexHooksManager.runHelper(arguments: ["uninstall", "codex-skill"])
+        if !skillResult.success && failure == nil {
+            failure = skillResult.message ?? "Uninstall failed."
+        }
+
+        return failure
+    }
+
+    private func refreshCodexIntegrationStatus(failureMessage: String? = nil) {
+        let hooksInstalled = CodexHooksManager.hooksInstalled()
+        let skillInstalled = CodexHooksManager.codexSkillInstalled()
+
+        if let failureMessage, !hooksInstalled || !skillInstalled {
+            codexStatus = hooksInstalled ? .installed : .failed(failureMessage)
+            codexSkillStatus = skillInstalled ? .installed : .failed(failureMessage)
+        } else {
+            codexStatus = hooksInstalled ? .installed : .notInstalled
+            codexSkillStatus = skillInstalled ? .installed : .notInstalled
         }
     }
 
@@ -324,10 +331,48 @@ final class SettingsViewModel: ObservableObject {
                 if result.success {
                     self[keyPath: status] = installed() ? .installed : .notInstalled
                 } else {
-                    self[keyPath: status] = .failed(result.message ?? failureFallback)
+                    self[keyPath: status] = installed()
+                        ? .installed
+                        : .failed(result.message ?? failureFallback)
                 }
             }
         }
+    }
+
+    private static func failureMessage(in statuses: [AgentInstallStatus]) -> String? {
+        for status in statuses {
+            if case .failed(let message) = status {
+                return message
+            }
+        }
+        return nil
+    }
+}
+
+enum AgentIntegrationStatus: Equatable {
+    case installed
+    case notInstalled
+    case installing
+    case failed(String)
+
+    init(skillStatus: AgentInstallStatus) {
+        switch skillStatus {
+        case .installed:
+            self = .installed
+        case .notInstalled:
+            self = .notInstalled
+        case .installing:
+            self = .installing
+        case .failed(let message):
+            self = .failed(message)
+        }
+    }
+
+    var failureMessage: String? {
+        if case .failed(let message) = self {
+            return message
+        }
+        return nil
     }
 }
 
@@ -336,43 +381,6 @@ enum AgentInstallStatus: Equatable {
     case notInstalled
     case installing
     case failed(String)
-
-    var title: String {
-        switch self {
-        case .installed:
-            return "Hooks installed"
-        case .notInstalled:
-            return "Not installed"
-        case .installing:
-            return "Working…"
-        case .failed:
-            return "Last action failed"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .installed:
-            return "checkmark.circle.fill"
-        case .notInstalled:
-            return "circle"
-        case .installing:
-            return "arrow.triangle.2.circlepath"
-        case .failed:
-            return "exclamationmark.triangle.fill"
-        }
-    }
-
-    var tint: Color {
-        switch self {
-        case .installed:
-            return .green
-        case .notInstalled, .installing:
-            return .secondary
-        case .failed:
-            return .red
-        }
-    }
 }
 
 struct SettingsView_Previews: PreviewProvider {

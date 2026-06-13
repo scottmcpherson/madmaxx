@@ -15,8 +15,9 @@ A file for [guiding coding agents](https://agents.md/).
 - **Formatting (Zig)**: `zig fmt .`
 - **Formatting (Swift)**: `swiftlint lint --strict --fix`
 - **Formatting (other)**: `prettier -w .`
-- **Post-work check:** Run `zig build run` after completing work and use
-  Peekaboo to test the app.
+- **Post-work check:** After making a feature or request change, create a dev
+  build and launch it for user testing with `zig build run`; then use Peekaboo
+  to test the app.
 
 ## libghostty-vt
 
