@@ -115,12 +115,12 @@ Out of scope:
   surfaces.
 - Heavyweight agent orchestration or management UI beyond terminal-native tab
   control and session status.
-- Features that significantly increase idle resource usage or make upstream
-  Ghostty updates difficult.
+- Features that significantly increase idle resource usage or add
+  maintenance-heavy surfaces outside the terminal core.
 - General-purpose workflow features better handled by agent CLIs or external
   tools.
 
-When in doubt, prefer terminal-native, lightweight, and upstream-friendly.
+When in doubt, prefer terminal-native, lightweight, and maintainable.
 
 ## Download
 
